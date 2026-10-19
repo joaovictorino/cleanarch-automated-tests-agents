@@ -98,6 +98,8 @@ Os componentes previstos são:
 - Não introduza padrões de projeto apenas por preferência.
 - Preserve o comportamento existente durante refatorações.
 - Mantenha erros de negócio compreensíveis e verificáveis.
+- Mantenha cada regra de validação e geração de valores dentro do objeto de domínio que a detém (por exemplo, métodos privados ou estáticos da própria classe).
+- Não crie funções utilitárias soltas, novos arquivos ou abstrações para essas regras sem previsão na especificação.
 
 ## 7. Desenvolvimento orientado por testes
 
@@ -180,6 +182,8 @@ Você não deve:
 - Avançar automaticamente para as atividades de outras aulas.
 
 Se encontrar conflito entre os arquivos, informe o conflito ao professor antes de escolher uma interpretação.
+
+Se a especificação não definir qual componente é responsável por uma regra ou comportamento, declare a decisão e solicite validação antes de implementar.
 
 ## 12. Comandos obrigatórios
 

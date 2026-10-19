@@ -92,6 +92,22 @@ Não haverá persistência, transações de banco de dados ou comunicação entr
 
 A preservação dos saldos em rejeições deverá ser testada, mas a atomicidade transacional de um sistema distribuído não está contemplada.
 
+### DT06 — Validação monetária
+
+A validação dos valores em centavos é responsabilidade de `Conta` e deve ser implementada dentro da própria classe, sem funções utilitárias soltas, tipos ou arquivos adicionais:
+
+- Saldo inicial: inteiro seguro maior ou igual a zero.
+- Saque e depósito: inteiro seguro maior que zero.
+- Depósito que faria o saldo ultrapassar `Number.MAX_SAFE_INTEGER` deve ser rejeitado.
+
+`TransferenciaValor` não duplica essas regras; delega-as a `sacar` e `depositar` e deve preservar os saldos quando uma delas falhar.
+
+### DT07 — Geração do comprovante
+
+`Recibo` é responsável por validar o formato do código e por fornecer o gerador padrão (`Recibo.gerarCodigoAleatorio`), que produz seis dígitos pseudoaleatórios, com zeros à esquerda.
+
+`TransferenciaValor` recebe o gerador por parâmetro e utiliza o de `Recibo` quando nenhum é informado. Um código inválido produzido pelo gerador deve rejeitar a transferência antes de qualquer alteração de saldo.
+
 ## 5. Contratos de código
 
 ### NumeroConta
@@ -124,6 +140,8 @@ Métodos:
 
 Em caso de violação das regras de negócio, a operação deverá lançar uma exceção sem alterar indevidamente o saldo.
 
+A validação dos valores monetários é feita pela própria `Conta` (ver DT06).
+
 ### Recibo
 
 Propriedade pública:
@@ -131,6 +149,18 @@ Propriedade pública:
 `codigo: string`
 
 Representa o comprovante de uma operação aceita.
+
+Construtor:
+
+`new Recibo(codigo: string)`
+
+Deve validar que o código possui exatamente seis dígitos ASCII (`0` a `9`).
+
+Método estático:
+
+`Recibo.gerarCodigoAleatorio(): string`
+
+Gerador padrão de códigos (ver DT07).
 
 ### TransferenciaValor
 
