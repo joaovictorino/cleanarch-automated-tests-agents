@@ -1,4 +1,4 @@
-# Bank TDD Lab
+# Bank Lab
 
 Projeto educacional desenvolvido para demonstração de conceitos.
 
