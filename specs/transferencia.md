@@ -53,22 +53,27 @@ As decisões abaixo complementam os critérios originais para estabelecer contra
 
 ### DT01 — Representação monetária
 
-Os valores financeiros deverão ser armazenados e calculados como inteiros em centavos.
+Os valores financeiros são representados em reais, como números finitos com no máximo duas casas decimais.
 
 Exemplo:
 
-| Valor em reais | Inteiro utilizado |
+| Valor em reais | Número utilizado |
 |---|---:|
-| R$ 20,00 | 2000 |
-| R$ 30,00 | 3000 |
-| R$ 70,00 | 7000 |
-| R$ 100,00 | 10000 |
+| R$ 1,50 | 1.5 |
+| R$ 20,00 | 20 |
+| R$ 30,00 | 30 |
+| R$ 70,00 | 70 |
+| R$ 100,00 | 100 |
 
-Valores monetários devem ser inteiros seguros, finitos e compatíveis com o saldo.
+Valores com mais de duas casas decimais (por exemplo, 1.255) são inválidos.
+
+Os cálculos devem ser arredondados para duas casas decimais, de modo que, por exemplo, depositar 0.1 e 0.2 resulte em saldo 0.3.
 
 ### DT02 — Saldo inicial
 
-Uma conta não deve ser criada com saldo negativo, fracionário ou não finito.
+Uma conta não deve ser criada com saldo negativo, com mais de duas casas decimais ou não finito.
+
+Saldo inicial fracionário com até duas casas decimais (por exemplo, 1.5) é permitido.
 
 Saldo inicial igual a zero é permitido.
 
@@ -94,10 +99,10 @@ A preservação dos saldos em rejeições deverá ser testada, mas a atomicidade
 
 ### DT06 — Validação monetária
 
-A validação dos valores em centavos é responsabilidade de `Conta` e deve ser implementada dentro da própria classe, sem funções utilitárias soltas, tipos ou arquivos adicionais:
+A validação dos valores monetários é responsabilidade de `Conta` e deve ser implementada dentro da própria classe, sem funções utilitárias soltas, tipos ou arquivos adicionais:
 
-- Saldo inicial: inteiro seguro maior ou igual a zero.
-- Saque e depósito: inteiro seguro maior que zero.
+- Saldo inicial: número finito, com até duas casas decimais, maior ou igual a zero.
+- Saque e depósito: número finito, com até duas casas decimais, maior que zero.
 - Depósito que faria o saldo ultrapassar `Number.MAX_SAFE_INTEGER` deve ser rejeitado.
 
 `TransferenciaValor` não duplica essas regras; delega-as a `sacar` e `depositar` e deve preservar os saldos quando uma delas falhar.
@@ -126,7 +131,7 @@ Deve validar exatamente seis dígitos ASCII (`0` a `9`).
 
 Construtor:
 
-`new Conta(numero: string, saldoInicialEmCentavos: number)`
+`new Conta(numero: string, saldoInicial: number)`
 
 Propriedades públicas de leitura:
 
@@ -135,8 +140,8 @@ Propriedades públicas de leitura:
 
 Métodos:
 
-- `sacar(valorEmCentavos: number): void`
-- `depositar(valorEmCentavos: number): void`
+- `sacar(valor: number): void`
+- `depositar(valor: number): void`
 
 Em caso de violação das regras de negócio, a operação deverá lançar uma exceção sem alterar indevidamente o saldo.
 
@@ -170,7 +175,7 @@ Construtor:
 
 Método:
 
-`transferir(origem: Conta, destino: Conta, valorEmCentavos: number): Recibo`
+`transferir(origem: Conta, destino: Conta, valor: number): Recibo`
 
 O gerador de comprovantes poderá ser substituído nos testes.
 
@@ -189,15 +194,16 @@ O gerador de comprovantes poderá ser substituído nos testes.
 | CT09 | Saque zero ou negativo | Rejeitar |
 | CT10 | Depósito positivo | Creditar |
 | CT11 | Depósito zero ou negativo | Rejeitar |
+| CT19 | Saque ou depósito fracionário com até duas casas decimais (ex.: 1.5) | Aceitar |
 | CT12 | Transferência com saldo suficiente | Debitar e creditar |
 | CT13 | Transferência com saldo exato | Aceitar |
 | CT14 | Transferência com saldo insuficiente | Rejeitar sem alterar saldos |
 | CT15 | Transferência de valor inválido | Rejeitar |
 | CT16 | Transferência para a própria conta | Rejeitar |
 | CT17 | Transferência válida | Retornar comprovante |
-| CT18 | Entrada monetária não finita ou fracionária | Rejeitar |
+| CT18 | Entrada monetária não finita ou com mais de duas casas decimais | Rejeitar |
 
-CT01 a CT17 detalham ou complementam os fluxos do exercício bancário. CT18 decorre da decisão de representar dinheiro por inteiros seguros em centavos.
+CT01 a CT17 detalham ou complementam os fluxos do exercício bancário. CT18 e CT19 decorrem da decisão de representar dinheiro em reais com até duas casas decimais.
 
 ## 7. Exemplos de comportamento
 
