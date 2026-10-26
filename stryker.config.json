@@ -1,0 +1,12 @@
+{
+  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "testRunner": "jest",
+  "jest": {
+    "projectType": "custom",
+    "configFile": "jest.domain.config.cjs"
+  },
+  "mutate": ["src/domain/Conta.ts"],
+  "coverageAnalysis": "perTest",
+  "concurrency": 2,
+  "reporters": ["clear-text", "progress", "html"]
+}

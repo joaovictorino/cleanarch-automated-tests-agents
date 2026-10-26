@@ -1,0 +1,31 @@
+name: Testes e qualidade - Lab 02
+on:
+  push:
+  pull_request:
+
+jobs:
+  testes:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Node.js 24 LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+      - name: Instalar dependencias do lockfile
+        run: npm ci
+      - name: Verificar tipos
+        run: npm run typecheck
+      - name: Jest com cobertura
+        run: npm run test:coverage
+      - name: Build do Next.js
+        run: npm run build
+      - name: Publicar cobertura
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cobertura-jest
+          path: coverage/
+          if-no-files-found: ignore

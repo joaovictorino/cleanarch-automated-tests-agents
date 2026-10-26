@@ -1,14 +1,22 @@
 {
   "compilerOptions": {
     "target": "ES2023",
-    "module": "commonjs",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
     "strict": true,
+    "noEmit": true,
+    "incremental": true,
     "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "allowJs": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "types": ["jest", "node"],
-    "rootDir": ".",
-    "outDir": "dist"
+    "plugins": [{ "name": "next" }]
   },
-  "include": ["src", "tests"]
+  "include": ["next-env.d.ts", "src", "tests", ".next/types/**/*.ts", ".next/dev/types/**/*.ts"],
+  "exclude": ["node_modules"]
 }

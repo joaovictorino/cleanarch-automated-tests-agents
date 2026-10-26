@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "noEmit": false,
+    "incremental": false,
+    "rootDir": ".",
+    "outDir": "dist"
+  },
+  "include": ["src/domain", "tests"]
+}
