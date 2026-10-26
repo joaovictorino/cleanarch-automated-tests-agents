@@ -1,0 +1,32 @@
+{
+  "name": "bank-tdd-lab",
+  "version": "1.0.0",
+  "description": "Laboratório de TDD - aplicação bancária",
+  "scripts": {
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/joaovictorino/cleanarch-automated-tests-agents.git"
+  },
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/joaovictorino/cleanarch-automated-tests-agents/issues"
+  },
+  "homepage": "https://github.com/joaovictorino/cleanarch-automated-tests-agents#readme",
+  "private": true,
+  "engines": {
+    "node": ">=24"
+  },
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "@types/node": "^26.6.5",
+    "jest": "^30.5.2",
+    "ts-jest": "^29.4.15",
+    "typescript": "^6.0.3"
+  }
+}
