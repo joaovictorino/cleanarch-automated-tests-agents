@@ -131,17 +131,7 @@ SONAR_TOKEN=seu_token_local
 
 **Não** adicionar o token a `sonar-project.properties`, AGENTS.md, GitHub, screenshots ou respostas do agente.
 
-### 5.6 Scanner em Docker
-
-```bash
-docker compose --env-file .env.sonar -f docker-compose.sonar.yml --profile scan run --rm scanner
-```
-
-Entre contêineres, usar `http://sonarqube:9000`, não `localhost`; no navegador host, usar `http://localhost:9000`. `sonar.javascript.lcov.reportPaths=coverage/lcov.info` é o parâmetro de cobertura **tanto para JS como TS**.
-
-Se a cobertura aparecer zerada, verificar: LCOV existe? diretório montado em `/usr/src`? caminhos `SF:` do LCOV referem-se aos arquivos incluídos em `sonar.sources`? o scanner tem permissão? o token está correto? O scanner terminou sem erro?
-
-### 5.7 Inspeção e encerramento
+### 5.6 Inspeção e encerramento
 
 Registrar valor/estado real do Quality Gate, confiabilidade, segurança, manutenibilidade, duplicação e cobertura importada. Se um indicador não aparecer na edição instalada, registrar a limitação em vez de inventar um valor.
 
@@ -150,16 +140,3 @@ docker compose -f docker-compose.sonar.yml down
 ```
 
 Não usar `down -v` inadvertidamente, pois apaga dados do laboratório.
-
-## 6. QUAL-05 — Comparação crítica para relatório
-
-Responder com resultados realmente observados:
-
-1. Quais regras passaram no Jest e quais critérios continuam sem teste?
-2. Qual trecho de negócio foi coberto sem ter asserção forte? Cite arquivo e linha.
-3. Um mutante **relevante** sobreviveu? Por quê? Qual teste o detectaria?
-4. O SonarQube apontou problema que Jest não aponta? E o inverso?
-5. As ferramentas produziram falsos alarmes, exclusões ou lacunas?
-6. O pipeline rodou **na branch do aluno**, com log e SHA identificados?
-
-**Pronto quando:** CI, Stryker e Sonar foram realmente executados e documentados, ou sua impossibilidade foi explicada com evidências. Uma configuração criada, mas não executada, é **pendência**, não sucesso.

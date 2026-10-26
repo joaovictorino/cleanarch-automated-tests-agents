@@ -38,8 +38,6 @@ bank-tdd-lab/
 │   ├── transferencias.feature      # cenários, prontos
 │   ├── step-definitions/
 │   │   └── transferencias.steps.ts  # atividade do aluno
-│   └── support/
-│       └── world.ts                # atividade do aluno
 ├── src/
 │   ├── domain/                     # implementação preservada da Aula 01
 │   ├── application/
@@ -139,15 +137,6 @@ npm run test:bdd -- --tags '@bdd-01'
 
 O `--dry-run` verifica descoberta de arquivos e compatibilidade de steps, **mas não executa o comportamento**; um dry-run bem-sucedido não substitui a execução real.
 
-## 8. Atividade D — implementar `World` e isolamento
-
-Crie `features/support/world.ts`, usando `World` e `setWorldConstructor` de `@cucumber/cucumber`. Cada cenário deve ter uma **instância independente** de estado que contenha, no mínimo:
-
-- coleção de **Contas reais** criadas para o cenário (o `Map` armazena as contas, não valores fictícios);
-- `POST` injetável construído com `criarPostTransferencias` e adaptador real;
-- resposta HTTP e corpo JSON da última requisição;
-- gerador de comprovante determinístico (por exemplo, `() => '123456'`).
-
 **Regras obrigatórias:**
 
 1. As contas devem ser criadas com os saldos descritos no `Dado` e usar os métodos reais da Aula 01.
@@ -157,9 +146,7 @@ Crie `features/support/world.ts`, usando `World` e `setWorldConstructor` de `@cu
 5. Não substitua o serviço real por um `jest.fn()` ou por uma função que devolva respostas previamente calculadas.
 6. A construção das dependências pode reutilizar um *fixture builder* separado, compartilhado com os testes de integração Jest, contanto que esse helper não dependa do Jest.
 
-> **Atenção:** o `World` de Cucumber não tem relação com o ambiente de teste Jest. Não use variáveis globais, singletons mutáveis ou uma única instância de `Map` para todos os cenários.
-
-## 9. Atividade E — implementar os steps
+## 8. Atividade D — implementar os steps
 
 Crie `features/step-definitions/transferencias.steps.ts` e implemente as definições correspondentes ao Gherkin fornecido. Os steps devem contemplar os seguintes contratos:
 
@@ -173,22 +160,7 @@ Crie `features/step-definitions/transferencias.steps.ts` e implemente as defini�
 | `E a resposta deve conter um comprovante de seis dígitos` | Verificar `^\d{6}$` no campo `comprovante` |
 | `E o erro retornado deve ser "SALDO_INSUFICIENTE"` | Conferir o campo JSON `erro` |
 
-Exemplo de definição de **asserção** que pode ser adotado depois que o aluno criar seu tipo de `World`:
-
-```ts
-import assert from 'node:assert/strict';
-import { Then } from '@cucumber/cucumber';
-import type { BancoWorld } from '../support/world';
-
-Then('o status HTTP deve ser {int}', function (this: BancoWorld, status: number) {
-  assert.ok(this.resposta, 'A requisição ainda não foi executada');
-  assert.equal(this.resposta.status, status);
-});
-```
-
-Este trecho é **apenas um exemplo de step**, não é uma implementação completa. O aluno deve criar `BancoWorld`, os demais steps e a ligação com o domínio da Aula 01. Use `function (...)`, e não *arrow functions*, quando precisar acessar o `this` do World.
-
-## 10. Cenários de aceite — fornecidos em `features/transferencias.feature`
+## 9. Cenários de aceite — fornecidos em `features/transferencias.feature`
 
 | ID | Comportamento | Resultado esperado |
 |---|---|---|
@@ -201,7 +173,7 @@ Este trecho é **apenas um exemplo de step**, não é uma implementação comple
 
 Os códigos e mensagens acima são os explicitamente estabelecidos ou exemplificados no material do Laboratório 02. **Outros casos** (conta inexistente, números inválidos, origem igual ao destino, precedência entre erros) devem seguir integralmente `specs/api-transferencias.md`, sem deduzir códigos não especificados nesta spec.
 
-## 11. Atividade F — executar RED, GREEN e REFACTOR
+## 11. Atividade E — executar RED, GREEN e REFACTOR
 
 **RED:** com `.feature` pronto e sem steps, execute `npm run test:bdd`; o Cucumber deverá indicar definições ausentes. Registre esse estado.
 
@@ -253,16 +225,3 @@ O relatório LCOV atual continuará vindo do Jest. **Executar Cucumber não inco
 - [ ] Relatórios HTML e JSON de uma execução real disponíveis.
 - [ ] GitHub Actions executa Jest e Cucumber sem depender de `npm run dev`.
 - [ ] Os testes anteriores da Aula 01 e da Aula 02 continuam passando.
-
-## 14. Entrega do aluno
-
-Envie na sua branch: `cucumber.cjs`, `features/step-definitions/transferencias.steps.ts`, `features/support/world.ts`, atualização dos scripts, lockfile e workflow. Apresente os comandos e relatórios de uma execução real, além de uma tabela simples `BDD-xx ↔ step(s) ↔ resultado` e uma breve análise da diferença entre asserções com Jest, testes integrados e BDD executável.
-
-**Não entregue** apenas uma feature em Gherkin ou um print de dry-run: o objetivo é demonstrar cenários efetivamente executados e conectados ao domínio bancário.
-
-## Referências técnicas
-
-- Cucumber.js — instalação: https://cucumber.io/docs/installation/javascript/
-- Cucumber.js — configuração: https://github.com/cucumber/cucumber-js/blob/main/docs/configuration.md
-- Cucumber.js — execução de TypeScript com tsx: https://github.com/cucumber/cucumber-js/blob/main/docs/transpiling.md
-- Cucumber.js — definições de steps e World: https://github.com/cucumber/cucumber-js/blob/main/docs/support_files/step_definitions.md
