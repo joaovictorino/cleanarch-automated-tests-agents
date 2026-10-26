@@ -226,3 +226,42 @@ Uma implementação somente poderá ser considerada concluída quando:
 - O agente apresentar evidências dos resultados.
 
 A responsabilidade de aceitar a implementação permanece com o desenvolvedor e com o professor.
+
+## Fontes de verdade e ordem de consulta
+
+1. Para regras bancárias: `specs/transferencia.md` (BANK-SPEC-001) e contratos de domínio já implementados.
+2. Para ambiente Next: `specs/criacao-nextjs.md`.
+3. Para HTTP e erros: `specs/api-transferencias.md`.
+4. Para estratégias de testes: `specs/mocks-e-integracao.md`.
+5. Para cenários de exemplo: `specs/transferencia.feature` (BDD descritivo, **não** exige Cucumber).
+6. Para ferramentas: `specs/qualidade-ci.md`.
+7. Para correspondência de IDs e evidências: `specs/rastreabilidade.md`.
+
+Em caso de conflito entre arquivos, **não escolher silenciosamente**: informar o professor, descrever o impacto e aguardar decisão antes de alterar contratos de domínio.
+
+## Limites arquiteturais
+
+- Evoluir o **mesmo repositório**; não criar projeto paralelo nem modificar a organização do domínio apenas para corresponder à árvore ilustrativa.
+- Next.js App Router apenas como adaptador HTTP nesta aula; a futura interface React fica para outra etapa.
+- `route.ts` deve ser uma composição simples que delega ao handler e ao domínio existente.
+- Não reimplementar saldo, saque, depósito ou transferência no handler, no adaptador, no React ou no teste.
+- Usar `Map` somente como fake demonstrativo e nos testes; não anunciar persistência, atomicidade distribuída ou segurança de produção.
+- Não adicionar banco de dados, autenticação, Cucumber, API alternativa, ORM, Docker de aplicação, Kubernetes ou serviços externos sem solicitação explícita.
+
+## Desenvolvimento orientado por especificação e testes
+
+- Executar um cenário por vez seguindo **RED → GREEN → REFACTOR** e Arrange–Act–Assert.
+- Preservar os testes da Aula 01. Não apagar nem alterar asserções para corrigir falhas de implementação.
+- Testes de mock verificam contrato e chamada; **não** comprovam os saldos. Testes integrados devem instanciar as classes de domínio reais e verificar origem e destino.
+- Simular comprovantes com um stub determinístico e criar `Map` isolado por teste.
+- Não considerar cobertura de linhas prova de aceitação, nem SonarQube substituto de Jest/Stryker.
+- Não vazar mensagens internas na resposta HTTP. Não classificar erros por comparação de texto de `Error.message`.
+- Nenhum token, senha ou dado secreto poderá ser comitado, inserido em prompts ou exibido em logs.
+
+## Limite de autonomia do agente
+
+O trabalho é dividido em etapas autorizadas pelo professor: migração Next, contrato HTTP, mocks/integração, BDD, CI/cobertura, Stryker, Sonar e revisão. **Pare ao concluir cada etapa** e peça autorização para avançar. Nunca implementar frontend, novas funcionalidades de domínio ou infraestrutura de produção por antecipação.
+
+## Resposta obrigatória ao fim de cada etapa
+
+Informar: (1) requisitos/IDs atendidos; (2) arquivos criados/alterados; (3) testes acrescentados; (4) comandos **realmente executados** e saídas principais; (5) RED observado e GREEN alcançado; (6) cenários ainda pendentes; (7) decisões que requerem validação do professor. Se não pôde executar um comando, explicar por quê e **não afirmar aprovação**.
