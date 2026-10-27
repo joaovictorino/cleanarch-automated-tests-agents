@@ -7,9 +7,6 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage --runInBand",
     "typecheck": "tsc --noEmit",
-    "build": "next build",
-    "dev": "next dev",
-    "start": "next start",
     "build:ts": "tsc -p tsconfig.build.json"
   },
   "repository": {
@@ -34,7 +31,6 @@
     "typescript": "^6.0.3"
   },
   "dependencies": {
-    "next": "^16.4.3",
     "react": "^19.3.1",
     "react-dom": "^19.3.1"
   }
