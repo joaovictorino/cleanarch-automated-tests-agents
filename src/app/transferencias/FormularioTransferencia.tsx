@@ -4,10 +4,6 @@ import { useEffect, useRef, useState, type FormEvent } from 'react';
 
 type Lado = 'origem' | 'destino';
 
-const FORMATO_CONTA = /^[0-9]{6}$/;
-// Formato de entrada do campo monetário: reais com até duas casas (vírgula ou ponto).
-const FORMATO_VALOR = /^[0-9]+([.,][0-9]{1,2})?$/;
-
 const MENSAGENS_ERRO: Record<string, string> = {
   CONTA_INVALIDA: 'Conta inválida',
   VALOR_INVALIDO: 'Valor inválido',
@@ -22,7 +18,7 @@ type Saldos = Record<Lado, string>;
 
 async function consultarSaldo(numero: string): Promise<string> {
   const resposta = await fetch(`/api/contas/${numero}`, { cache: 'no-store' });
-  if (resposta.status === 404) return '';
+  if (resposta.status === 404 || resposta.status === 400) return '';
   if (!resposta.ok) throw new Error('consulta');
   const dados: unknown = await resposta.json();
   if (
@@ -52,7 +48,8 @@ export function FormularioTransferencia() {
 
   async function atualizarSaldo(lado: Lado, numero: string) {
     const id = ++consultaAtual.current[lado];
-    if (!FORMATO_CONTA.test(numero)) {
+    // O formato da conta é validado pelo servidor; aqui só se evita consultar campo vazio.
+    if (numero === '') {
       setSaldos((anterior) => ({ ...anterior, [lado]: '' }));
       setAvisosConta((anterior) => ({ ...anterior, [lado]: '' }));
       return;
@@ -84,11 +81,6 @@ export function FormularioTransferencia() {
     evento.preventDefault();
     setComprovante(null);
     setErro(null);
-
-    if (!FORMATO_VALOR.test(valor)) {
-      setErro(MENSAGENS_ERRO.VALOR_INVALIDO);
-      return;
-    }
 
     setEnviando(true);
     try {

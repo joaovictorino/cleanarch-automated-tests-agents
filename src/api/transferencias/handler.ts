@@ -12,10 +12,10 @@ export type OperacaoTransferencia = {
   ): { comprovante: string } | Promise<{ comprovante: string }>;
 };
 
-const FORMATO_CONTA = /^[0-9]{6}$/;
-
 // Códigos de domínio previstos para este endpoint. Qualquer outro vira 500.
 const STATUS_POR_CODIGO: Partial<Record<string, number>> = {
+  CONTA_INVALIDA: 400,
+  VALOR_INVALIDO: 400,
   MESMA_CONTA: 422,
   SALDO_INSUFICIENTE: 422,
   CONTA_NAO_ENCONTRADA: 404,
@@ -39,20 +39,6 @@ function ehObjetoJson(valor: unknown): valor is Record<string, unknown> {
   return typeof valor === 'object' && valor !== null && !Array.isArray(valor);
 }
 
-function ehContaValida(conta: unknown): conta is string {
-  return typeof conta === 'string' && FORMATO_CONTA.test(conta);
-}
-
-// Guarda de transporte do contrato JSON; invariantes de saldo continuam no domínio.
-function ehValorValido(valor: unknown): valor is number {
-  return (
-    typeof valor === 'number' &&
-    Number.isFinite(valor) &&
-    valor > 0 &&
-    Math.abs(valor * 100 - Math.round(valor * 100)) < 1e-6
-  );
-}
-
 export function criarPostTransferencias(
   operacao: OperacaoTransferencia,
 ): (request: Request) => Promise<Response> {
@@ -68,14 +54,12 @@ export function criarPostTransferencias(
     }
 
     const { contaOrigem, contaDestino, valor } = corpo;
-    if (!ehContaValida(contaOrigem) || !ehContaValida(contaDestino)) {
+    // Apenas tipos do contrato JSON; formato, valor e mesma conta são regras do domínio.
+    if (typeof contaOrigem !== 'string' || typeof contaDestino !== 'string') {
       return respostaErro('CONTA_INVALIDA', 400);
     }
-    if (!ehValorValido(valor)) {
+    if (typeof valor !== 'number') {
       return respostaErro('VALOR_INVALIDO', 400);
-    }
-    if (contaOrigem === contaDestino) {
-      return respostaErro('MESMA_CONTA', 422);
     }
 
     try {

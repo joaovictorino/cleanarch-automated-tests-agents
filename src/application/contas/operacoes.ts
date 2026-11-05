@@ -1,6 +1,7 @@
 import type { ContaDTO, OperacoesContas } from '../../api/contas/handlers';
 import { Conta } from '../../domain/Conta';
 import { ErroNegocio } from '../../domain/ErroNegocio';
+import { NumeroConta } from '../../domain/NumeroConta';
 
 function paraDTO(conta: Conta): ContaDTO {
   return { numero: conta.numero, saldo: conta.saldo };
@@ -9,7 +10,8 @@ function paraDTO(conta: Conta): ContaDTO {
 export function criarOperacoesContas(contas: Map<string, Conta>): OperacoesContas {
   return {
     criar({ numero, saldoInicial }) {
-      // Valida/constrói a Conta antes de qualquer inserção; a validação monetária é do domínio.
+      // Precedência: número (NumeroConta) → saldo (Conta) → duplicidade; nada é inserido antes.
+      new NumeroConta(numero);
       const conta = new Conta(numero, saldoInicial);
       if (contas.has(conta.numero)) {
         throw new ErroNegocio('CONTA_JA_EXISTE', 'Já existe uma conta com este número');
@@ -23,7 +25,7 @@ export function criarOperacoesContas(contas: Map<string, Conta>): OperacoesConta
     },
 
     consultar(id) {
-      const conta = contas.get(id);
+      const conta = contas.get(new NumeroConta(id).numero);
       return conta === undefined ? undefined : paraDTO(conta);
     },
   };

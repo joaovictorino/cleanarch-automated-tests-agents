@@ -59,14 +59,17 @@ describe('POST /api/contas — contrato HTTP com mock', () => {
 | ID | Operação | Asserções mínimas |
 | --- | --- | --- |
 | CMOCK-01 | POST válido / `criar` resolve DTO | 201, corpo, Location, chamada única com argumentos corretos |
-| CMOCK-02 | POST número inválido / saldo com tipo string | 400 `CONTA_INVALIDA` ou `SALDO_INVALIDO`; `criar` **não** chamado |
+| CMOCK-02 | POST `numero` ausente/numérico ou `saldoInicial` ausente/string (falha de **tipo**) | 400 `CONTA_INVALIDA` ou `SALDO_INVALIDO`; `criar` **não** chamado |
+| CMOCK-02b | POST `numero` `'12345'` ou `saldoInicial` -1 / 1.255 (falha de **valor/formato**); `criar` rejeita com `new ErroNegocio('CONTA_INVALIDA' \| 'SALDO_INVALIDO', 'mensagem de teste')` (`test.each`) | 400 com o código do erro; `criar` chamado uma vez com os dados originais, sem alteração; o handler não decide por conta própria |
 | CMOCK-03 | POST JSON quebrado / `null` / array | 400 `REQUISICAO_INVALIDA`; `criar` não chamado |
 | CMOCK-04 | POST `criar` rejeita com erro identificado `CONTA_JA_EXISTE` | 409; não vazar mensagem interna |
 | CMOCK-05 | `criar` lança erro inesperado | 500 `ERRO_INTERNO`; resposta não revela segredo |
 | CMOCK-06 | GET lista / `listar` resolve DTOs fora de ordem | 200; handler entrega ordenação contratada; somente `listar` chamado |
 | CMOCK-07 | GET por ID válido / `consultar` retorna DTO | 200; `consultar('123456')` chamado uma vez |
-| CMOCK-08 | GET por ID inválido | 400; `consultar` não chamado |
+| CMOCK-08 | GET por ID; `consultar` lança `new ErroNegocio('CONTA_INVALIDA', 'mensagem de teste')` | 400 `CONTA_INVALIDA`; `consultar` chamado com o ID recebido; o formato real do ID é provado em CINT-08 |
 | CMOCK-09 | GET por ID inexistente / `consultar` retorna `undefined` | 404; corpo exato |
+
+**Regra anti-duplicação:** com mock, um teste só pode exigir "`criar` não chamado" quando a causa é estrutura ou tipo (CMOCK-02, 03, 08). Para formato ou valor, o mock simula o `ErroNegocio` do domínio (CMOCK-02b) e a decisão real é provada por CINT-04 com `Conta`/`NumeroConta` reais. Um teste de mock que passa somente se o handler contiver regex de conta ou checagem monetária indica duplicação e deve ser reescrito, não atendido. CMOCK-08 (ID da URL) segue a mesma regra: o handler não valida o formato com regex; o adaptador real é quem rejeita.
 
 **Distinção essencial:** `CMOCK-01` não demonstra que uma conta foi criada em memória, apenas que o contrato HTTP chamou a operação simulada. O erro `SALDO_INVALIDO` para saldo numérico negativo/fracionário é verificado **com a classe real `Conta`**, não com uma implementação monetária copiada para o handler.
 
@@ -124,7 +127,7 @@ Em **cada teste**, crie `new Map<string, Conta>()` e `criarOperacoesContas(map)`
 | CINT-01 | Criar `123456`, saldo 1000 | 201, Location, `map.size === 1`, `map.get('123456')` é `Conta` real, saldo 1000 |
 | CINT-02 | Criar `001234`/0 e `654321`/200.29 | Status 201, zeros preservados, saldos exatos |
 | CINT-03 | Criar 123456 duas vezes | 409, `map.size` intacto, mesma instância de conta, saldo original |
-| CINT-04 | Criar com saldo -1, 1.255, número malformado | 400 adequado, `map.size === 0` |
+| CINT-04 | Criar com saldo -1, 1.255, acima de `Number.MAX_SAFE_INTEGER`, número malformado (`test.each`); e as combinações de precedência de CONTA-08 | 400 com o código esperado pela precedência, `map.size === 0`; prova que a regra vem do domínio real |
 | CINT-05 | GET vazio | 200 `{"contas":[]}` |
 | CINT-06 | Criar 654321, 001234, 123456 e listar | 200, 3 registros ordenados, campos exatos e saldos corretos |
 | CINT-07 | Consultar 123456 e 001234 | 200, sem perda de zeros, nenhuma alteração de saldo |
@@ -160,7 +163,7 @@ Após o professor liberar a etapa de transferência, adicionar `tests/api/fluxo-
 
 ## 6. Evidências e ponto de parada
 
-Registre IDs `CONTA-*`, `CMOCK-*`, `CINT-*` e `FLUXO-*` na matriz `specs/rastreabilidade.md`, com nomes **reais** dos testes, saídas Jest e eventuais decisões sobre mapeamento de erros. As evidências devem separar:
+No relatório final da etapa, associe os IDs `CONTA-*`, `CMOCK-*`, `CINT-*` e `FLUXO-*` aos nomes **reais** dos testes, com saídas Jest e eventuais decisões sobre mapeamento de erros. As evidências devem separar:
 
 - RED por contrato ainda não implementado;
 - GREEN após menor implementação;

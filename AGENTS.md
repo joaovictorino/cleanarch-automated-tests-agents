@@ -15,7 +15,8 @@ A autorização para uma etapa vem da tarefa atual do professor/aluno. Execute a
 5. `specs/api-transferencias.md` e `specs/mocks-e-integracao.md`: transferência HTTP e integração real.
 6. `specs/bdd-cucumber.md` e `specs/transferencias.feature`: seis cenários Cucumber obrigatórios.
 7. `specs/qualidade-ci.md`: CI, cobertura, Stryker e SonarQube.
-8. `specs/rastreabilidade.md`: evidências e definição de pronto.
+
+Evidências e definição de pronto vêm da seção "Definição de pronto" de cada spec e do relatório final descrito em "Validação por etapa".
 
 O roteiro determina a ordem de trabalho; as specs determinam os resultados esperados. Havendo conflito real, descreva-o antes de alterar contratos. Não invente requisitos para contornar falhas.
 
@@ -35,6 +36,15 @@ Preserve classes, assinaturas, valores em reais, validação monetária, mensage
 A extensão de exceções descrita em `specs/erros-aplicacao.md` é parte explícita desta revisão. Ela permite adicionar `ErroNegocio` e enriquecer os lançamentos indicados, mantendo mensagens e comportamentos. Não reescreva as operações bancárias.
 
 Saldo, saque, depósito, arredondamento, transferência e validação de comprovante continuam no domínio. O handler valida o contrato de transporte, delega e traduz erros classificados. Nunca classifique erro por substring da mensagem ou converta todo erro desconhecido em HTTP 400.
+
+### Fronteira handler × domínio (anti-duplicação)
+
+- **Transporte (handler pode fazer):** JSON parseável, corpo é objeto, campo presente, `typeof` esperado (`string`/`number`). Nada além disso.
+- **Domínio (handler nunca reimplementa):** formato do número da conta, escala de duas casas, positividade, finitude, limite máximo, saldo, mesma conta, arredondamento. Essas regras chegam ao handler como `ErroNegocio` lançado pelo domínio/adaptador e são apenas traduzidas.
+- **Vetados em `src/api/**` e `src/app/**`:** `Math.round`, `* 100`, `Number.MAX_SAFE_INTEGER`, `Number.isFinite`/`isInteger` sobre dinheiro, comparações `<= 0`/`< 0` sobre valores monetários e regex de número de conta (`[0-9]{6}`).
+- **Antes de escrever qualquer validação:** procure em `src/domain`. Se a regra existe, delegue; se precisar de uma checagem sem construir o objeto, exporte-a do domínio (autorizado só mediante registro da decisão) e importe, nunca copie.
+- **Ordem de precedência** dos erros é garantida pelo adaptador de aplicação, usando as classes reais, e não por pré-validação no handler.
+- Se um critério de aceite parecer exigir duplicar uma regra de domínio no handler, pare e descreva o conflito antes de implementar.
 
 ## Desenvolvimento e testes
 
