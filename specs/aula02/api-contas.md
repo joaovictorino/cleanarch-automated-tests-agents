@@ -73,13 +73,15 @@ A resposta deve refletir o **saldo corrente**. A conta com número `001234` é c
 
 O corpo de erro segue **um único formato**: `{"erro":"CODIGO"}`. Não devolver mensagens internas, stack traces nem instâncias de domínio.
 
-| Endpoint | Condição | HTTP | Código |
-| --- | --- | ---: | --- |
-| POST | JSON malformado, array, `null` ou qualquer corpo que não seja objeto JSON | 400 | `REQUISICAO_INVALIDA` |
-| POST | `numero` ausente, não string ou formato diferente de seis dígitos ASCII | 400 | `CONTA_INVALIDA` |
-| POST | `saldoInicial` ausente, tipo incorreto, negativo, não finito ou precisão acima de duas casas | 400 | `SALDO_INVALIDO` |
-| POST | Número válido já cadastrado | 409 | `CONTA_JA_EXISTE` |
-| GET por ID | Identificador da URL diferente de seis dígitos ASCII | 400 | `CONTA_INVALIDA` |
+| Endpoint | Condição | HTTP | Código | Quem detecta |
+| --- | --- | ---: | --- | --- |
+| POST | JSON malformado, array, `null` ou qualquer corpo que não seja objeto JSON | 400 | `REQUISICAO_INVALIDA` | Handler |
+| POST | `numero` ausente ou não string | 400 | `CONTA_INVALIDA` | Handler (tipo) |
+| POST | `numero` string com formato diferente de seis dígitos ASCII | 400 | `CONTA_INVALIDA` | Domínio (`NumeroConta` → `ErroNegocio`) |
+| POST | `saldoInicial` ausente ou não `number` | 400 | `SALDO_INVALIDO` | Handler (tipo) |
+| POST | `saldoInicial` negativo, não finito, precisão acima de duas casas ou acima do máximo | 400 | `SALDO_INVALIDO` | Domínio (`Conta` → `ErroNegocio`) |
+| POST | Número válido já cadastrado | 409 | `CONTA_JA_EXISTE` | Adaptador de contas |
+| GET por ID | Identificador da URL diferente de seis dígitos ASCII | 400 | `CONTA_INVALIDA` | Domínio (`NumeroConta` via adaptador; o handler não usa regex) |
 | GET por ID | Número bem formado, porém não cadastrado | 404 | `CONTA_NAO_ENCONTRADA` |
 | Qualquer um | Falha técnica inesperada, não classificada como erro de contrato/domínio | 500 | `ERRO_INTERNO` |
 
@@ -122,6 +124,9 @@ export function criarGetContaPorId(
 - O adaptador `src/application/contas/operacoes.ts` deve exportar `criarOperacoesContas(contas: Map<string, Conta>): OperacoesContas`, usando o `Conta` **real** da Aula 01. O `Map` é um fake de armazenamento em memória; não é banco de dados.
 - Criar requer **validar/construir `Conta` antes de inserir**; a inserção ocorre somente depois de todas as validações e da checagem de duplicidade, preservando estado nos erros.
 - Listar e consultar geram DTOs de leitura (`numero`, `saldo`) a partir das instâncias atuais; não expor referências a `Conta` na resposta HTTP.
+- **Matriz de responsabilidade (normativa).** O handler só verifica JSON, objeto, presença e `typeof`. Formato do número, escala/sinal/finitude/máximo do saldo e duplicidade são detectados por `NumeroConta`, `Conta` e pelo adaptador, e chegam ao handler como `ErroNegocio`, traduzido pela lista de códigos do endpoint. É vetado no handler: regex de número, `Math.round`, `* 100`, `Number.isFinite`, `MAX_SAFE_INTEGER` e comparações monetárias.
+- **Precedência.** A ordem número → saldo → duplicidade é garantida em `criarOperacoesContas`, construindo `NumeroConta` antes de `Conta` (ou equivalente), e não por pré-validação no handler. Alterar a ordem interna do construtor de `Conta` é mudança de domínio e não é autorizada nesta etapa.
+- **Testes com mock.** Para formato de número e valor do saldo, o mock de `criar` lança `ErroNegocio(código)` e o teste verifica o mapeamento HTTP. Os mesmos casos de `CONTA-05/06/08` rodam depois com o adaptador real. "Não executar criação" vale apenas para falhas de estrutura/tipo.
 - A origem da validação monetária é `Conta`. Aplicar `specs/erros-aplicacao.md` antes desta etapa: saldo inicial inválido lança ErroNegocio com SALDO_INVALIDO, preservando mensagens e testes. O handler verifica estrutura/tipos, mas não reimplementa a validação bancária para saldo numérico negativo ou precisão inválida.
 - Um erro desconhecido resulta em `500 ERRO_INTERNO` em vez de ser convertido automaticamente em `400`.
 
@@ -162,7 +167,7 @@ Fixture padrão dos testes: `Map` vazio, classes bancárias reais e mocks de ope
 | CONTA-02 | Criar `001234` com saldo zero | 201; preservar zeros; saldo 0 |
 | CONTA-03 | Criar `654321` com 200.29 | 201; saldo 200.29 sem truncar |
 | CONTA-04 | Repetir criação de `123456` | 409 `CONTA_JA_EXISTE`; nenhuma substituição; saldo/quantidade intactos |
-| CONTA-05 | Número `12345`, `1234567`, `12A456`, numérico, espaços ou ausente | 400 `CONTA_INVALIDA`; não executar criação para formato inválido |
+| CONTA-05 | Número `12345`, `1234567`, `12A456`, numérico, espaços ou ausente | 400 `CONTA_INVALIDA`; numérico/ausente: handler responde sem chamar `criar`; formato inválido: `criar` (mock lança `ErroNegocio`, ou adaptador real) e nenhuma conta inserida |
 | CONTA-06 | Saldo ausente, string, `null`, -1, 1.255 | 400 `SALDO_INVALIDO`; nenhuma inserção |
 | CONTA-07 | Corpo `{`, `null`, `[]` | 400 `REQUISICAO_INVALIDA`; cadastro intacto |
 | CONTA-08 | Número inválido **e** saldo inválido; ou número duplicado **e** saldo inválido | Prioridade `CONTA_INVALIDA` / `SALDO_INVALIDO`; nenhum efeito |

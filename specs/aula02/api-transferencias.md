@@ -39,15 +39,17 @@ A resposta é JSON, sem dados das contas, saldos ou stack traces. O comprovante 
 
 ## 3. Tabela normativa de erros
 
-| Condição | HTTP | Corpo JSON |
-| --- | ---: | --- |
-| JSON inválido, `null`, array ou outro corpo que não seja objeto JSON | 400 | `{"erro":"REQUISICAO_INVALIDA"}` |
-| `contaOrigem` ou `contaDestino` ausente, não string ou diferente de seis dígitos ASCII | 400 | `{"erro":"CONTA_INVALIDA"}` |
-| `valor` ausente, não numérico, zero, negativo, não finito ou com mais de duas casas decimais | 400 | `{"erro":"VALOR_INVALIDO"}` |
-| Mesma conta (strings idênticas e válidas) | 422 | `{"erro":"MESMA_CONTA"}` |
-| Conta com formato válido que não está no cadastro em memória | 404 | `{"erro":"CONTA_NAO_ENCONTRADA"}` |
-| Valor maior que saldo disponível | 422 | `{"erro":"SALDO_INSUFICIENTE"}` |
-| Falha inesperada / erro interno sem classificação contratual | 500 | `{"erro":"ERRO_INTERNO"}` |
+| Condição | HTTP | Corpo JSON | Quem detecta |
+| --- | ---: | --- | --- |
+| JSON inválido, `null`, array ou outro corpo que não seja objeto JSON | 400 | `{"erro":"REQUISICAO_INVALIDA"}` | Handler |
+| `contaOrigem` ou `contaDestino` ausente ou não string | 400 | `{"erro":"CONTA_INVALIDA"}` | Handler (tipo) |
+| `contaOrigem` ou `contaDestino` string com formato diferente de seis dígitos ASCII | 400 | `{"erro":"CONTA_INVALIDA"}` | Domínio (`NumeroConta` → `ErroNegocio`) |
+| `valor` ausente ou não `number` | 400 | `{"erro":"VALOR_INVALIDO"}` | Handler (tipo) |
+| `valor` zero, negativo, não finito ou com mais de duas casas decimais | 400 | `{"erro":"VALOR_INVALIDO"}` | Domínio (`Conta` → `ErroNegocio`) |
+| Mesma conta (strings idênticas e válidas) | 422 | `{"erro":"MESMA_CONTA"}` | Domínio (`TransferenciaValor`) |
+| Conta com formato válido que não está no cadastro em memória | 404 | `{"erro":"CONTA_NAO_ENCONTRADA"}` | Adaptador de transferência |
+| Valor maior que saldo disponível | 422 | `{"erro":"SALDO_INSUFICIENTE"}` | Domínio (`Conta.sacar`) |
+| Falha inesperada / erro interno sem classificação contratual | 500 | `{"erro":"ERRO_INTERNO"}` | Handler (erro não classificado) |
 
 **Ordem de precedência quando há vários erros na mesma entrada:** (1) estrutura JSON; (2) formato das contas; (3) formato/validade do valor; (4) mesma conta; (5) existência das contas; (6) regras de transferência no domínio; (7) falhas internas. É uma **decisão didática específica da Aula 02** e deve ser mantida pelos testes; ela não estava definida na Aula 01.
 
@@ -103,7 +105,13 @@ O caso de uso/adaptador deve:
 
 **Mapeamento de erro:** aplicar `specs/erros-aplicacao.md` antes desta etapa. Reconhecer ErroNegocio e os códigos previstos na tabela; preservar mensagens e testes anteriores do domínio. Erro desconhecido, recibo inválido ou falha de crédito por limite máximo resultam em `500 ERRO_INTERNO`, sem expor mensagem técnica e com saldos preservados. Não interpretar `Error.message` nem transformar todo erro em 400.
 
-**Validação no limite HTTP x domínio:** a camada HTTP verifica os tipos, campos e formato do contrato, mas a autoridade sobre a movimentação e seus invariantes permanece no domínio. Uma checagem de formato na borda não justifica duplicar lógica de saldo, saque, depósito, arredondamento ou transferência.
+**Matriz de responsabilidade (normativa).** O handler só verifica JSON, objeto, presença e `typeof`. Formato das contas, escala/sinal/finitude do valor, mesma conta e saldo são regras do domínio, chegam como `ErroNegocio` e são traduzidas pela lista de códigos do endpoint. É vetado no handler: regex de conta, `Math.round`, `* 100`, `Number.isFinite`, comparações monetárias e `contaOrigem === contaDestino`.
+
+**Precedência.** A ordem da §3 (formato das contas → valor → mesma conta → existência → saldo) é garantida por `criarOperacaoTransferencia`, construindo `NumeroConta` e validando o valor com as classes reais antes de consultar o cadastro, e não por pré-validação no handler. Se isso exigir exportar uma checagem do domínio ou alterá-lo, registre a decisão e peça autorização antes.
+
+**Testes com mock.** Para formato de conta e valor numérico inválido, o mock de `executar` lança `ErroNegocio(código)` e o teste verifica o mapeamento HTTP. Os mesmos casos de `API-04/05/06/08/12` rodam depois com o adaptador real. "Operação não acionada" vale apenas para falhas de estrutura/tipo.
+
+**Validação no limite HTTP x domínio:** a camada HTTP verifica os tipos e campos do contrato, mas a autoridade sobre a movimentação e seus invariantes permanece no domínio. Uma checagem de formato na borda não justifica duplicar lógica de saldo, saque, depósito, arredondamento ou transferência.
 
 ## 5. Dados padronizados e critérios de aceite
 
@@ -120,7 +128,7 @@ Fixture de integração, recriada antes de **cada teste**:
 | API-01 | Transferir 300 | `201`, comprovante `123456` | Origem 700; destino 500 |
 | API-02 | Transferir exatamente 1000 | `201`, comprovante válido | Origem 0; destino 1200 |
 | API-03 | Transferir 1001 | `422 SALDO_INSUFICIENTE` | Origem 1000; destino 200 |
-| API-04 | Valor `0` e `-1` (`test.each`) | `400 VALOR_INVALIDO` | Sem alterações; operação não acionada |
+| API-04 | Valor `0` e `-1` (`test.each`) | `400 VALOR_INVALIDO` | Sem alterações; com mock, `executar` lança `ErroNegocio(VALOR_INVALIDO)`; com adaptador real, a `Conta` rejeita |
 | API-05 | Valor `"300"`, `null`, `1.255`, campo omitido | `400 VALOR_INVALIDO` | Sem alterações |
 | API-06 | `12345` e `1234567` (e conta em número) | `400 CONTA_INVALIDA` | Sem alterações |
 | API-07 | Conta `999999` não cadastrada | `404 CONTA_NAO_ENCONTRADA` | Sem alterações |
