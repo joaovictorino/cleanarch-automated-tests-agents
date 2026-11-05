@@ -9,8 +9,6 @@ export type OperacoesContas = {
   consultar(id: string): ContaDTO | undefined | Promise<ContaDTO | undefined>;
 };
 
-const FORMATO_NUMERO_CONTA = /^[0-9]{6}$/;
-
 const STATUS_POR_CODIGO: Partial<Record<string, number>> = {
   CONTA_INVALIDA: 400,
   SALDO_INVALIDO: 400,
@@ -55,7 +53,7 @@ export function criarPostContas(
     }
 
     const { numero, saldoInicial } = corpo;
-    if (typeof numero !== 'string' || !FORMATO_NUMERO_CONTA.test(numero)) {
+    if (typeof numero !== 'string') {
       return respostaErro('CONTA_INVALIDA', 400);
     }
     if (typeof saldoInicial !== 'number') {
@@ -94,9 +92,6 @@ export function criarGetContaPorId(
   operacoes: OperacoesContas,
 ): (request: Request, id: string) => Promise<Response> {
   return async (_request, id) => {
-    if (!FORMATO_NUMERO_CONTA.test(id)) {
-      return respostaErro('CONTA_INVALIDA', 400);
-    }
     try {
       const conta = await operacoes.consultar(id);
       if (conta === undefined) {

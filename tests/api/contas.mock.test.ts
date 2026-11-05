@@ -42,14 +42,13 @@ describe('POST /api/contas — contrato HTTP com mock', () => {
   });
 
   test.each([
-    ['número com cinco dígitos', { numero: '12345', saldoInicial: 10 }, 'CONTA_INVALIDA'],
     ['número numérico', { numero: 123456, saldoInicial: 10 }, 'CONTA_INVALIDA'],
     ['número ausente', { saldoInicial: 10 }, 'CONTA_INVALIDA'],
     ['saldo como string', { numero: '123456', saldoInicial: '10' }, 'SALDO_INVALIDO'],
     ['saldo ausente', { numero: '123456' }, 'SALDO_INVALIDO'],
     ['saldo null', { numero: '123456', saldoInicial: null }, 'SALDO_INVALIDO'],
-    ['número e saldo inválidos (precedência)', { numero: '12', saldoInicial: 'x' }, 'CONTA_INVALIDA'],
-  ])('CMOCK-02: %s devolve 400 sem chamar criar', async (_nome, corpo, codigo) => {
+    ['número e saldo com tipos inválidos (precedência)', { numero: 12, saldoInicial: 'x' }, 'CONTA_INVALIDA'],
+  ])('CMOCK-02: %s (tipo) devolve 400 sem chamar criar', async (_nome, corpo, codigo) => {
     const operacoes = criarOperacoesMock();
     const POST = criarPostContas(operacoes);
 
@@ -58,6 +57,18 @@ describe('POST /api/contas — contrato HTTP com mock', () => {
     expect(response.status).toBe(400);
     expect(await response.json()).toEqual({ erro: codigo });
     expect(operacoes.criar).not.toHaveBeenCalled();
+  });
+
+  test('CMOCK-02b: número com formato inválido chega como ErroNegocio e vira 400', async () => {
+    const operacoes = criarOperacoesMock();
+    operacoes.criar.mockRejectedValue(new ErroNegocio('CONTA_INVALIDA', 'mensagem de teste'));
+    const POST = criarPostContas(operacoes);
+
+    const response = await POST(postJson(JSON.stringify({ numero: '12345', saldoInicial: 10 })));
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ erro: 'CONTA_INVALIDA' });
+    expect(operacoes.criar).toHaveBeenCalledTimes(1);
   });
 
   test.each([
@@ -182,19 +193,17 @@ describe('GET /api/contas — contrato HTTP com mock', () => {
     expect(operacoes.consultar).toHaveBeenCalledWith('123456');
   });
 
-  test.each(['12345', '1234567', 'ABC123', '', ' 12345', '１２３４５６'])(
-    'CMOCK-08: ID %p inválido devolve 400 sem consultar',
-    async (id) => {
-      const operacoes = criarOperacoesMock();
-      const GET = criarGetContaPorId(operacoes);
+  test('CMOCK-08: ID inválido chega como ErroNegocio e vira 400 CONTA_INVALIDA', async () => {
+    const operacoes = criarOperacoesMock();
+    operacoes.consultar.mockRejectedValue(new ErroNegocio('CONTA_INVALIDA', 'mensagem de teste'));
+    const GET = criarGetContaPorId(operacoes);
 
-      const response = await GET(new Request('http://localhost/api/contas/x'), id);
+    const response = await GET(new Request('http://localhost/api/contas/x'), '12345');
 
-      expect(response.status).toBe(400);
-      expect(await response.json()).toEqual({ erro: 'CONTA_INVALIDA' });
-      expect(operacoes.consultar).not.toHaveBeenCalled();
-    },
-  );
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ erro: 'CONTA_INVALIDA' });
+    expect(operacoes.consultar).toHaveBeenCalledWith('12345');
+  });
 
   test('CMOCK-09: ID inexistente devolve 404 CONTA_NAO_ENCONTRADA', async () => {
     const operacoes = criarOperacoesMock();
