@@ -63,16 +63,23 @@ describe('POST /api/transferencias — mock da operação', () => {
 | ID | Entrada / simulação | Asserções mínimas |
 | --- | --- | --- |
 | MOCK-01 | JSON válido; `executar` retorna comprovante | 201, corpo exato, chamada uma vez com argumentos corretos |
-| MOCK-02 | `valor = 0` | 400 `VALOR_INVALIDO`; `executar` não chamado |
-| MOCK-03 | Conta com cinco dígitos; corpo JSON inválido | 400 com código específico; `executar` não chamado |
+| MOCK-02 | `valor` ausente ou string `"300"` (falha de **tipo**) | 400 `VALOR_INVALIDO`; `executar` não chamado |
+| MOCK-02b | `valor = 0`; `executar` rejeita com `new ErroNegocio('VALOR_INVALIDO', 'mensagem de teste')` | 400 `VALOR_INVALIDO`; `executar` chamado uma vez com `valor: 0` sem alteração; o handler não compara o valor |
+| MOCK-03 | Corpo JSON inválido; conta ausente ou numérica (falha de estrutura/tipo) | 400 `REQUISICAO_INVALIDA` / `CONTA_INVALIDA`; `executar` não chamado |
+| MOCK-03b | Conta `'12345'`; `executar` rejeita com `new ErroNegocio('CONTA_INVALIDA', 'mensagem de teste')` | 400 `CONTA_INVALIDA`; `executar` chamado uma vez; o handler não usa regex de conta |
+| MOCK-06 | `executar` rejeita com `ErroNegocio` de código fora da lista do endpoint (ex.: `CONTA_JA_EXISTE`) | 500 `ERRO_INTERNO`; sem vazamento de mensagem |
 | MOCK-04 | `executar` rejeita com erro de domínio identificado como `SALDO_INSUFICIENTE` | 422 `SALDO_INSUFICIENTE`; chamada uma vez; sem vazamento de mensagem |
 | MOCK-05 | `executar` lança `new Error('segredo interno')` | 500 `ERRO_INTERNO`; resposta não contém `segredo interno` |
+
+**Regra anti-duplicação:** "`executar` não chamado" só é exigido para falhas de estrutura ou tipo. Valor (zero, negativo, mais de duas casas) e formato de conta são decididos pelo domínio; com mock, a causa é simulada por `ErroNegocio` (MOCK-02b, 03b) e a decisão real é provada nos testes de integração (INT-07). Um teste de mock que só passa se o handler tiver regex de conta, `Math.round` ou comparação monetária indica duplicação e deve ser reescrito.
 
 **Teste de invalidez pronto para adaptação:**
 
 ```ts
-test('MOCK-02: valor zero é rejeitado antes do serviço', async () => {
-  const executar = jest.fn();
+test('MOCK-02b: erro VALOR_INVALIDO do domínio vira 400 sem decisão no handler', async () => {
+  const executar = jest.fn().mockRejectedValue(
+    new ErroNegocio('VALOR_INVALIDO', 'mensagem de teste'),
+  );
   const POST = criarPostTransferencias({ executar });
   const requisicao = new Request('http://localhost/api/transferencias', {
     method: 'POST',
@@ -84,7 +91,7 @@ test('MOCK-02: valor zero é rejeitado antes do serviço', async () => {
   const resposta = await POST(requisicao);
   expect(resposta.status).toBe(400);
   expect(await resposta.json()).toEqual({ erro: 'VALOR_INVALIDO' });
-  expect(executar).not.toHaveBeenCalled();
+  expect(executar).toHaveBeenCalledTimes(1);
 });
 ```
 
@@ -100,6 +107,7 @@ test('MOCK-02: valor zero é rejeitado antes do serviço', async () => {
 | INT-04 | 1000 / 200 por teste | Executar INT-01 duas vezes com nova fixture | Ambos os testes iniciam com 1000 / 200, sem vazamento de estado |
 | INT-05 | 1000 / 200 | Mesma conta, saldo inválido ou conta ausente (`test.each` onde couber) | Erro contratual; **ambos** os saldos originais |
 | INT-06 | 1000 / 200 | Gerador retorna `'ERRADO'` | Erro sem mutação; dois saldos preservados |
+| INT-07 | 1000 / 200 | `test.each`: valor 0, -1, 1.255; conta `'12345'`; precedência (conta e valor inválidos → `CONTA_INVALIDA`; mesma conta e inexistente → `MESMA_CONTA`) | 400/422 com o código da precedência de `api-transferencias.md` §3, vindo do domínio real; ambos os saldos preservados |
 
 O adaptador pode usar a interface:
 
@@ -145,6 +153,6 @@ Produzir uma tabela que associe `MOCK-*`, `INT-*` e `API-*` aos títulos reais d
 
 ## 7. Erros classificados e ordem desta revisão
 
-Pré-requisito: `specs/erros-aplicacao.md`. No MOCK-04, utilizar ErroNegocio com SALDO_INSUFICIENTE. MOCK-05 usa Error genérico com mensagem técnica e espera 500.
+Pré-requisito: `specs/erros-aplicacao.md`. A fronteira handler × domínio de `AGENTS.md` vale para todos os testes acima. Antes de concluir, rodar a verificação QUAL-01b de `specs/qualidade-ci.md`. No MOCK-04, utilizar ErroNegocio com SALDO_INSUFICIENTE. MOCK-05 usa Error genérico com mensagem técnica e espera 500.
 
 Primeiro construir e testar contas; depois criar a factory de transferência com mock; em seguida criar o adaptador real, completar INT-01..06 e ligar a rota. FLUXO-01..04 é verificado em `specs/testes-contas.md`. Não importar o singleton demonstrativo.

@@ -42,6 +42,8 @@ Preserve literalmente as mensagens já lançadas pelo domínio nos pontos existe
 
 O excesso de saldo máximo no depósito e o recibo inválido continuam falhas não mapeadas por este contrato HTTP e produzem `500 ERRO_INTERNO`, com estado preservado. Não classificar qualquer Error genérico como erro de entrada nem inventar código HTTP para essas falhas.
 
+**Regra de reutilização.** O domínio é a única fonte das validações da tabela acima. Os handlers não as repetem: apenas capturam `ErroNegocio`. Se a ordem de precedência exigir checar algo antes de construir o objeto, o adaptador de aplicação usa as classes reais (`new NumeroConta(...)`). Só se isso for impossível, exportar a checagem do domínio (por exemplo `NumeroConta.ehValido`) sem mudar mensagens, e importá-la, nunca copiá-la. Registrar a decisão.
+
 Erros estruturais de JSON e tipos podem ser respondidos diretamente pelo handler. Não é preciso lançar ErroNegocio para cada requisição rejeitada antes da operação.
 
 ## Testes e regressão

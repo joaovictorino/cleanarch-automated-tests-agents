@@ -22,6 +22,16 @@ Exigir `coverage/lcov.info` não vazio. Registrar Statements, Branches, Function
 
 A página/layout mínimos podem ter linhas não cobertas; identificar essa limitação sem confundir com ausência de testes de regras bancárias. A automação da interface fica para a próxima aula.
 
+### Verificação de duplicação de domínio (QUAL-01b)
+
+Antes de declarar pronta qualquer etapa de API, executar e registrar o resultado (esperado: nenhuma ocorrência):
+
+```bash
+grep -rnE "Math\.round|\* ?100|MAX_SAFE_INTEGER|Number\.isFinite|\[0-9\]\{6\}|\\\\d\{6\}" src/api src/app
+```
+
+Cada ocorrência é duplicação de regra de domínio, a menos que justificada por escrito (por exemplo, texto de resposta). Não excluir diretórios para esconder o resultado. Opcionalmente, transformar em regra ESLint `no-restricted-syntax` ou teste de arquitetura.
+
 ## 3. QUAL-02 — Evolução do workflow único
 
 O arquivo operacional é `.github/workflows/ci.yml`. O pacote fornece a versão **inicial**, que executa instalação, tipos, Jest/cobertura e `build:ts`, compatível com a base sem Next.

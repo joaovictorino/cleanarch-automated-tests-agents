@@ -24,31 +24,43 @@ describe('POST /api/transferencias — mock da operação', () => {
     expect(executar).toHaveBeenCalledWith(valido);
   });
 
-  test('MOCK-02: valor zero é rejeitado antes do serviço', async () => {
-    const executar = jest.fn();
+  test('MOCK-02: valor zero é traduzido a partir do ErroNegocio do domínio', async () => {
+    const executar = jest.fn().mockRejectedValue(new ErroNegocio('VALOR_INVALIDO', 'valor'));
     const POST = criarPostTransferencias({ executar });
 
     const resposta = await POST(requisicao(JSON.stringify({ ...valido, valor: 0 })));
 
     expect(resposta.status).toBe(400);
     expect(await resposta.json()).toEqual({ erro: 'VALOR_INVALIDO' });
-    expect(executar).not.toHaveBeenCalled();
+    expect(executar).toHaveBeenCalledWith({ ...valido, valor: 0 });
   });
 
   test.each([
-    ['conta de origem com cinco dígitos', { ...valido, contaOrigem: '12345' }, 'CONTA_INVALIDA'],
-    ['conta de destino com sete dígitos', { ...valido, contaDestino: '1234567' }, 'CONTA_INVALIDA'],
-    ['conta numérica', { ...valido, contaOrigem: 123456 }, 'CONTA_INVALIDA'],
-    ['conta ausente', { contaDestino: '654321', valor: 300 }, 'CONTA_INVALIDA'],
-  ])('MOCK-03/API-06: %s → 400 %s sem acionar a operação', async (_n, corpo, erro) => {
+    ['conta numérica', { ...valido, contaOrigem: 123456 }],
+    ['conta ausente', { contaDestino: '654321', valor: 300 }],
+  ])('MOCK-03/API-06: %s (tipo) → 400 CONTA_INVALIDA sem acionar a operação', async (_n, corpo) => {
     const executar = jest.fn();
     const POST = criarPostTransferencias({ executar });
 
     const resposta = await POST(requisicao(JSON.stringify(corpo)));
 
     expect(resposta.status).toBe(400);
-    expect(await resposta.json()).toEqual({ erro });
+    expect(await resposta.json()).toEqual({ erro: 'CONTA_INVALIDA' });
     expect(executar).not.toHaveBeenCalled();
+  });
+
+  test.each([
+    ['conta de origem com cinco dígitos', { ...valido, contaOrigem: '12345' }],
+    ['conta de destino com sete dígitos', { ...valido, contaDestino: '1234567' }],
+  ])('MOCK-03/API-06: %s (formato) → 400 CONTA_INVALIDA vindo do ErroNegocio', async (_n, corpo) => {
+    const executar = jest.fn().mockRejectedValue(new ErroNegocio('CONTA_INVALIDA', 'conta'));
+    const POST = criarPostTransferencias({ executar });
+
+    const resposta = await POST(requisicao(JSON.stringify(corpo)));
+
+    expect(resposta.status).toBe(400);
+    expect(await resposta.json()).toEqual({ erro: 'CONTA_INVALIDA' });
+    expect(executar).toHaveBeenCalledTimes(1);
   });
 
   test.each([
@@ -71,12 +83,24 @@ describe('POST /api/transferencias — mock da operação', () => {
   test.each([
     ['zero', 0],
     ['negativo', -1],
+    ['três casas decimais', 1.255],
+  ])('API-04/05: valor %s → 400 VALOR_INVALIDO vindo do ErroNegocio', async (_n, v) => {
+    const executar = jest.fn().mockRejectedValue(new ErroNegocio('VALOR_INVALIDO', 'valor'));
+    const POST = criarPostTransferencias({ executar });
+
+    const resposta = await POST(requisicao(JSON.stringify({ ...valido, valor: v })));
+
+    expect(resposta.status).toBe(400);
+    expect(await resposta.json()).toEqual({ erro: 'VALOR_INVALIDO' });
+    expect(executar).toHaveBeenCalledTimes(1);
+  });
+
+  test.each([
     ['string numérica', '300'],
     ['null', null],
-    ['três casas decimais', 1.255],
     ['omitido', undefined],
     ['booleano', true],
-  ])('API-04/05: valor %s → 400 VALOR_INVALIDO sem acionar a operação', async (_n, v) => {
+  ])('API-05: valor %s (tipo) → 400 VALOR_INVALIDO sem acionar a operação', async (_n, v) => {
     const executar = jest.fn();
     const POST = criarPostTransferencias({ executar });
 
@@ -87,12 +111,12 @@ describe('POST /api/transferencias — mock da operação', () => {
     expect(executar).not.toHaveBeenCalled();
   });
 
-  test('API-12b: conta inválida e valor inválido → precedência para CONTA_INVALIDA', async () => {
+  test('API-12b: tipo de conta e de valor inválidos → precedência para CONTA_INVALIDA', async () => {
     const executar = jest.fn();
     const POST = criarPostTransferencias({ executar });
 
     const resposta = await POST(
-      requisicao(JSON.stringify({ contaOrigem: '12345', contaDestino: '654321', valor: -5 })),
+      requisicao(JSON.stringify({ contaOrigem: 12345, contaDestino: '654321', valor: 'x' })),
     );
 
     expect(resposta.status).toBe(400);
