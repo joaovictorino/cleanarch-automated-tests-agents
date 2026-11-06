@@ -2,7 +2,7 @@
 
 ## 1. Objetivo e entregas
 
-Automatizar duas jornadas de transferência pelo navegador, verificar seus efeitos no servidor e diagnosticar falhas com evidências. A comparação de performance complementa a atividade.
+Automatizar duas jornadas de transferência pelo navegador, verificar seus efeitos no servidor e diagnosticar falhas com evidências. A comparação de performance complementa a atividade. A demonstração manual da tela usa PostgreSQL local via Docker, com migration e seed; os testes continuam em memória.
 
 | Parte | Entrega | Obrigatoriedade |
 | --- | --- | --- |
@@ -26,12 +26,38 @@ Nesse snapshot existem o domínio bancário, quatro arquivos de testes de domín
 | PRE-03 | Node.js 24, dependências e lockfile ensaiados; Playwright e Chromium preparados; Jest e Playwright descobrem apenas seus próprios testes |
 | PRE-04 | Instruções de escopo do `AGENTS.md` atualizadas para a Aula 03; regressão, tipos e build executados; commit do checkpoint registrado |
 | PRE-05 | Helper de criação/consulta de contas entregue e validado, sem testes E2E de solução prontos; comandos, relatórios e uma evidência de diagnóstico disponíveis |
+| PRE-06 | Demonstração local com PostgreSQL/Docker, migration e seed preparada conforme 2.2; Playwright, k6, regressão e CI continuam executáveis com o banco desligado |
 
-O `AGENTS.md` atual ainda contém restrições das aulas anteriores, inclusive proibição de frontend. Doiseve acrescentar uma seção específica da Aula 03 autorizando a tela didática durante a preparação e os testes Playwright/k6 nesta etapa, preservando as regras bancárias e as restrições de segurança. Não enviar um agente para implementar a interface com instruções que ainda a proíbam.
+O `AGENTS.md` atual ainda contém restrições das aulas anteriores, inclusive proibição de frontend. Doiseve acrescentar uma seção específica da Aula 03 autorizando a tela didática e o banco local para demonstração durante a preparação, com testes Playwright/k6 e CI em memória nesta etapa, preservando as regras bancárias e as restrições de segurança. Não enviar um agente para implementar a interface com instruções que ainda a proíbam.
 
 O ambiente é um processo Next.js local na porta 3000, com frontend e API na mesma origem. Não há autenticação no exercício. Não criar login, token ou serviço na porta 3001 apenas para reproduzir exemplos ilustrativos dos slides.
 
-O `Map` é armazenamento didático em memória. O checkpoint deve comprovar o compartilhamento do estado entre as rotas na execução real do Next. Reinício, hot reload, múltiplos processos e serverless podem perder ou divergir esse estado. Os testes verificam estado no servidor durante a execução; não comprovam persistência durável.
+Nos testes Playwright/k6 e na CI, o `Map` continua como armazenamento didático em memória. O checkpoint deve comprovar o compartilhamento do estado entre as rotas na execução real do Next. Reinício, hot reload, múltiplos processos e serverless podem perder ou divergir esse estado. Os testes verificam estado no servidor durante a execução; não comprovam persistência durável.
+
+### 2.2. Banco apenas para demonstração local
+
+Usar a mesma tela, as mesmas APIs e o mesmo domínio com seleção do armazenamento no servidor, por variável de ambiente. A inclusão do banco é parte da preparação da aplicação, sem criar novos exercícios de teste.
+
+| Uso | Configuração | Dados |
+| --- | --- | --- |
+| Demonstração manual | `CONTAS_STORAGE=postgres` | PostgreSQL local via Docker, migration e seed |
+| Playwright, k6, regressão e CI | `CONTAS_STORAGE=memory` (padrão) | `Map` existente; helper e `setup()` atuais |
+
+Entregar `docker-compose.yaml` com serviço `db`, PostgreSQL com versão fixa, volume persistente e healthcheck; migration versionada da tabela de contas; seed; `.env.example`; e os comandos `db:migrate` e `db:seed`. Manter a aplicação Next fora do Docker. A migration preserva número de conta como texto de seis dígitos e saldo com duas casas decimais. O seed cria, sem duplicar ou sobrescrever contas existentes, `123456` com R$ 1.000,00 e `654321` com R$ 200,00.
+
+Configurar em `.env.local` o `DATABASE_URL` de desenvolvimento indicado em `.env.example`, compatível com o serviço `db` (por exemplo, `postgresql://lab03:lab03@127.0.0.1:5432/lab03`). Os scripts de migration e seed devem carregar essa configuração. Não salvar `CONTAS_STORAGE=postgres` nesse arquivo; selecionar o modo somente na inicialização da demonstração.
+
+```bash
+docker compose up -d --wait db
+npm run db:migrate
+npm run db:seed
+npm run build
+CONTAS_STORAGE=postgres npm run start -- --hostname 127.0.0.1 --port 3000
+```
+
+Abrir `/transferencias`, consultar as duas contas do seed e fazer uma transferência manual de R$ 300,00. Demonstrar os saldos 700/500 após reiniciar a aplicação no mesmo modo, sem recriar o volume. O adaptador PostgreSQL reutiliza o domínio e persiste os dois saldos na mesma transação; os contratos HTTP e a tela permanecem os mesmos.
+
+Encerrar o servidor antes dos testes. O `webServer` do Playwright deve forçar `CONTAS_STORAGE=memory` no ambiente do processo Next. Para k6, iniciar o servidor com `CONTAS_STORAGE=memory`. Não executar migration/seed nem abrir conexão com PostgreSQL no modo `memory`, no build ou ao importar módulos. A existência de `DATABASE_URL` não seleciona o banco. Validar as execuções de testes com `docker compose stop db`: massa por HTTP, cenários e critérios das seções 5 a 9 continuam iguais.
 
 ## 3. Contratos herdados da Aula 02
 
@@ -55,7 +81,7 @@ Contas são strings de seis dígitos ASCII. Valores da API são números em **re
 | Comprovante | Propriedade `comprovante`, seis dígitos, sem prefixo `TRF-` |
 | URLs | Tela `/transferencias`; API `/api/contas` e `/api/transferencias`, na mesma origem |
 | Autenticação | Ausente nesta base; os exemplos de Bearer token não se aplicam |
-| Infraestrutura | Estado em memória; nenhum banco de dados ou pool de conexões é acrescentado |
+| Infraestrutura | Playwright/k6 e CI em memória; PostgreSQL via Docker, migration e seed somente para demonstração manual local, conforme 2.2 |
 
 ## 4. Contrato da tela didática
 
@@ -172,6 +198,8 @@ Com todos os testes aprovados, a ausência de trace retido é normal. A evidênc
 | CI-02 | Publicar `playwright-report/` e `test-results/` com `if: always()`; falhas dos testes mantêm o job reprovado, sem `continue-on-error` ou `|| true` |
 | CI-03 | Registrar commit e execução real da CI; não deixar `test.only`, `test.skip`, teste vazio ou falha controlada na entrega final |
 
+O job E2E deve iniciar o servidor com `CONTAS_STORAGE=memory`; não incluir serviço PostgreSQL, Docker, migration ou seed na CI.
+
 ## 9. Performance com k6 — demonstração ou extensão
 
 ### 9.1. Modelo de carga
@@ -208,4 +236,4 @@ VUs não equivalem a req/s. `http_req_duration` mede a requisição HTTP e não 
 
 ## 10. Fora do escopo
 
-Nova regra bancária, autenticação, banco/ORM, endpoint de reset, carga concorrente de escrita, teste de estresse/soak real, preparação de produção e avaliação de LLMs. Firefox/WebKit e teste de campo vazio são extensões; não substituem os dois cenários obrigatórios no Chromium.
+Nova regra bancária, autenticação, banco/ORM nos testes e na CI, endpoint de reset, carga concorrente de escrita, teste de estresse/soak real, preparação de produção e avaliação de LLMs. Firefox/WebKit e teste de campo vazio são extensões; não substituem os dois cenários obrigatórios no Chromium.

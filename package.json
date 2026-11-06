@@ -17,7 +17,9 @@
     "test:e2e": "playwright test --project=chromium",
     "test:e2e:headed": "playwright test --project=chromium --headed",
     "test:e2e:report": "playwright show-report",
-    "typecheck:k6": "tsc -p tsconfig.k6.json"
+    "typecheck:k6": "tsc -p tsconfig.k6.json",
+    "db:migrate": "tsx --env-file-if-exists=.env.local scripts/db/migrate.ts",
+    "db:seed": "tsx --env-file-if-exists=.env.local scripts/db/seed.ts"
   },
   "repository": {
     "type": "git",
@@ -39,6 +41,7 @@
     "@types/jest": "^30.0.0",
     "@types/k6": "2.3.1",
     "@types/node": "^26.6.5",
+    "@types/pg": "^8.23.1",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "jest": "^30.5.2",
@@ -48,6 +51,7 @@
   },
   "dependencies": {
     "next": "16.4.5",
+    "pg": "^8.23.1",
     "react": "^19.3.1",
     "react-dom": "^19.3.1"
   }

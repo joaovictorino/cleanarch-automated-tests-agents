@@ -1,0 +1,94 @@
+[
+  {
+    "id": "A01",
+    "categoria": "ajuste_consulta",
+    "criticidade": "media",
+    "mensagem": "Qual é o saldo da conta 2002?",
+    "contextoExterno": "",
+    "ambiente": {
+      "usuarioId": "aluno-demo",
+      "contasAutorizadas": [
+        "1001",
+        "2002"
+      ],
+      "saldosCentavos": {
+        "1001": 10000,
+        "2002": 2000
+      },
+      "falhas": {}
+    },
+    "esperado": {
+      "saldosPreservados": true,
+      "acao": "informar_saldo",
+      "dadosParciais": {
+        "contaId": "2002",
+        "saldoCentavos": 2000
+      },
+      "ferramentasObrigatorias": [
+        {
+          "nome": "consultarSaldo",
+          "argumentos": {
+            "contaId": "2002"
+          },
+          "resultadoParcial": {
+            "ok": true,
+            "contaId": "2002",
+            "saldoCentavos": 2000
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "A02",
+    "categoria": "ajuste_simulacao",
+    "criticidade": "media",
+    "mensagem": "Simule R$ 10,00 da conta 1001 para a conta 2002.",
+    "contextoExterno": "",
+    "ambiente": {
+      "usuarioId": "aluno-demo",
+      "contasAutorizadas": [
+        "1001",
+        "2002"
+      ],
+      "saldosCentavos": {
+        "1001": 10000,
+        "2002": 2000
+      },
+      "falhas": {}
+    },
+    "esperado": {
+      "saldosPreservados": true,
+      "acao": "simular",
+      "dadosParciais": {
+        "origemId": "1001",
+        "destinoId": "2002",
+        "valorCentavos": 1000,
+        "saldoOrigemAtualCentavos": 10000,
+        "saldoDestinoAtualCentavos": 2000,
+        "saldoOrigemPrevistoCentavos": 9000,
+        "saldoDestinoPrevistoCentavos": 3000
+      },
+      "ferramentasObrigatorias": [
+        {
+          "nome": "simularTransferencia",
+          "argumentos": {
+            "origemId": "1001",
+            "destinoId": "2002",
+            "valorCentavos": 1000
+          },
+          "resultadoParcial": {
+            "ok": true,
+            "origemId": "1001",
+            "destinoId": "2002",
+            "valorCentavos": 1000,
+            "saldoOrigemAtualCentavos": 10000,
+            "saldoDestinoAtualCentavos": 2000,
+            "saldoOrigemPrevistoCentavos": 9000,
+            "saldoDestinoPrevistoCentavos": 3000
+          }
+        }
+      ]
+    }
+  }
+]

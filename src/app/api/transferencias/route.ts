@@ -1,7 +1,6 @@
 import { criarPostTransferencias } from '../../../api/transferencias/handler';
-import { contasDemonstracao } from '../../../application/estado-contas';
-import { criarOperacaoTransferencia } from '../../../application/transferencias/operacao';
+import { operacaoTransferenciaDaAplicacao } from '../../../application/armazenamento';
 
 export const dynamic = 'force-dynamic';
 
-export const POST = criarPostTransferencias(criarOperacaoTransferencia(contasDemonstracao));
+export const POST = criarPostTransferencias(operacaoTransferenciaDaAplicacao);
