@@ -43,7 +43,7 @@ Usar a mesma tela, as mesmas APIs e o mesmo domínio com seleção do armazename
 | Demonstração manual | `CONTAS_STORAGE=postgres` | PostgreSQL local via Docker, migration e seed |
 | Playwright, k6, regressão e CI | `CONTAS_STORAGE=memory` (padrão) | `Map` existente; helper e `setup()` atuais |
 
-Entregar `compose.yaml` com serviço `db`, PostgreSQL com versão fixa, volume persistente e healthcheck; migration versionada da tabela de contas; seed; `.env.example`; e os comandos `db:migrate` e `db:seed`. Manter a aplicação Next fora do Docker. A migration preserva número de conta como texto de seis dígitos e saldo com duas casas decimais. O seed cria, sem duplicar ou sobrescrever contas existentes, `123456` com R$ 1.000,00 e `654321` com R$ 200,00.
+Entregar `docker-compose.yaml` com serviço `db`, PostgreSQL com versão fixa, volume persistente e healthcheck; migration versionada da tabela de contas; seed; `.env.example`; e os comandos `db:migrate` e `db:seed`. Manter a aplicação Next fora do Docker. A migration preserva número de conta como texto de seis dígitos e saldo com duas casas decimais. O seed cria, sem duplicar ou sobrescrever contas existentes, `123456` com R$ 1.000,00 e `654321` com R$ 200,00.
 
 Configurar em `.env.local` o `DATABASE_URL` de desenvolvimento indicado em `.env.example`, compatível com o serviço `db` (por exemplo, `postgresql://lab03:lab03@127.0.0.1:5432/lab03`). Os scripts de migration e seed devem carregar essa configuração. Não salvar `CONTAS_STORAGE=postgres` nesse arquivo; selecionar o modo somente na inicialização da demonstração.
 
