@@ -28,6 +28,7 @@ export default defineConfig({
     command: 'npm run start -- --hostname 127.0.0.1 --port 3000',
     url: `${baseURL}/transferencias`,
     reuseExistingServer: false,
+    env: { CONTAS_STORAGE: 'memory' },
     timeout: 120_000,
     stdout: 'pipe',
     stderr: 'pipe',

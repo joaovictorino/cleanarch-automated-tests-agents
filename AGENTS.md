@@ -26,8 +26,8 @@ O roteiro determina a ordem de trabalho; as specs determinam os resultados esper
 - Next.js App Router como adaptador HTTP; React apenas para uma página mínima nesta aula.
 - Jest principal com next/jest após a migração; `jest.domain.config.cjs` com ts-jest para mutação.
 - Cucumber.js com tsx e carregamento CommonJS. Não adicionar `type: module` nesta atividade.
-- Docker somente para SonarQube e scanner.
-- Sem banco de dados, ORM, autenticação implementada, formulário bancário, endpoints extras ou infraestrutura de produção.
+- Docker para SonarQube, scanner e o PostgreSQL local da demonstração (Aula 03, spec 2.2).
+- Sem ORM, autenticação implementada, formulário bancário, endpoints extras ou infraestrutura de produção.
 
 ## Preservação do domínio
 
@@ -83,4 +83,24 @@ continuam nas specs da Aula 02; o contrato da atividade está em
 specs/laboratorio-03.md. Durante o laboratório dos alunos, a tela já é fornecida:
 o trabalho principal é escrever testes, investigar falhas e interpretar métricas.
 Preservar testes anteriores, valores em reais e o comprovante de seis dígitos.
-Não introduzir autenticação, banco de dados, reset de contas ou carga de escrita.
+Não introduzir autenticação, reset de contas ou carga de escrita.
+
+Exceção (spec 2.2): PostgreSQL local via Docker, `pg` e SQL puro (sem ORM) são
+autorizados apenas para a demonstração manual com `CONTAS_STORAGE=postgres`.
+O padrão é `memory`; Jest, Cucumber, Playwright, k6 e CI não usam banco, e
+`DATABASE_URL` sozinha nunca ativa o PostgreSQL.
+
+# Instruções para o agente — Laboratório 04
+
+Este diretório contém material de uma aula. O objetivo é criar o chat com a turma e **depois** acrescentar testes e avaliação. Este pedido prevalece sobre um fluxo genérico de gerar todos os testes antes da aplicação.
+
+1. Leia `specs/SPEC_LABORATORIO_04_CHAT.md` e a spec da etapa solicitada. Implemente somente essa etapa preservando o projeto das aulas anteriores.
+2. Se o repositório já contiver uma aplicação equivalente, inspecione-a, preserve alterações do professor e adapte o caminho sem duplicar o núcleo. Não troque branches, apague ou faça push sem uma solicitação correspondente.
+3. Na etapa 01, construa o chat, as regras e o trace básico; use verificação manual e smoke. A suíte automatizada será acrescentada na etapa 02, e o Promptfoo na 03.
+4. Nunca leia ou imprima `.env` para produzir relatórios. Use `.env.example` para explicar nomes. Credenciais são preenchidas localmente pelo professor.
+5. Não invente resultado real, número de aprovações, custo, latência, token ou acesso ao Azure. Modo fake é sempre identificado.
+6. Não transforme saída inválida em resposta aprovada. Não envie `esperado` ao modelo. Não mude oráculos após observar falhas para tornar a suíte verde.
+7. Somente `consultarSaldo` e `simularTransferencia` são executáveis. Não crie movimentação de saldo ou integração bancária real.
+8. Preserve contratos entre etapas. Refatore quando necessário mantendo comportamento; não crie um caminho de execução especial para o avaliador.
+9. Use versões estáveis compatíveis, dependências diretas exatas e lockfile gerado pelo npm. Não escreva um lockfile à mão. Na etapa 03, inspecione a API/tipos da versão local do Promptfoo antes de usar metadados e resultados.
+10. Ao concluir, liste o que foi gerado, os comandos de verificação efetivamente executados, limitações e próximo checkpoint. Ausência de credenciais não impede construir/testar offline.

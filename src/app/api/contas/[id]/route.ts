@@ -1,10 +1,9 @@
 import { criarGetContaPorId } from '../../../../api/contas/handlers';
-import { criarOperacoesContas } from '../../../../application/contas/operacoes';
-import { contasDemonstracao } from '../../../../application/estado-contas';
+import { operacoesContasDaAplicacao } from '../../../../application/armazenamento';
 
 export const dynamic = 'force-dynamic';
 
-const getContaPorId = criarGetContaPorId(criarOperacoesContas(contasDemonstracao));
+const getContaPorId = criarGetContaPorId(operacoesContasDaAplicacao);
 
 export async function GET(
   request: Request,
