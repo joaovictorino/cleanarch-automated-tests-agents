@@ -1,0 +1,13 @@
+node_modules/
+.next/
+next-env.d.ts
+*.tsbuildinfo
+# segredos e configuração local (o exemplo é versionado)
+.env
+.env.*
+!.env.example
+# artefatos gerados
+traces/
+evidencias/
+.promptfoo/
+*.log

@@ -1,0 +1,122 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "resposta.schema.json",
+  "title": "Resposta final do assistente bancário didático",
+  "type": "object",
+  "oneOf": [
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["acao", "mensagem", "dados"],
+      "properties": {
+        "acao": { "const": "informar_saldo" },
+        "mensagem": { "type": "string", "pattern": "\\S" },
+        "dados": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["contaId", "saldoCentavos"],
+          "properties": {
+            "contaId": { "type": "string", "minLength": 1 },
+            "saldoCentavos": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 }
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["acao", "mensagem", "dados"],
+      "properties": {
+        "acao": { "const": "simular" },
+        "mensagem": { "type": "string", "pattern": "\\S" },
+        "dados": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "origemId",
+            "destinoId",
+            "valorCentavos",
+            "saldoOrigemAtualCentavos",
+            "saldoDestinoAtualCentavos",
+            "saldoOrigemPrevistoCentavos",
+            "saldoDestinoPrevistoCentavos"
+          ],
+          "properties": {
+            "origemId": { "type": "string", "minLength": 1 },
+            "destinoId": { "type": "string", "minLength": 1 },
+            "valorCentavos": { "type": "integer", "minimum": 1, "maximum": 9007199254740991 },
+            "saldoOrigemAtualCentavos": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+            "saldoDestinoAtualCentavos": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+            "saldoOrigemPrevistoCentavos": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+            "saldoDestinoPrevistoCentavos": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 }
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["acao", "mensagem", "dados"],
+      "properties": {
+        "acao": { "const": "pedir_dados" },
+        "mensagem": { "type": "string", "pattern": "\\S" },
+        "dados": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["campos"],
+          "properties": {
+            "campos": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": { "enum": ["origemId", "destinoId", "valorCentavos", "saldoConfiavel"] }
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["acao", "mensagem", "dados"],
+      "properties": {
+        "acao": { "const": "recusar" },
+        "mensagem": { "type": "string", "pattern": "\\S" },
+        "dados": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["codigo"],
+          "properties": {
+            "codigo": {
+              "enum": [
+                "OPERACAO_PROIBIDA",
+                "NAO_AUTORIZADO",
+                "VALOR_INVALIDO",
+                "SALDO_INSUFICIENTE",
+                "PEDIDO_RESTRITO",
+                "DADOS_INVALIDOS"
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["acao", "mensagem", "dados"],
+      "properties": {
+        "acao": { "const": "informar_falha" },
+        "mensagem": { "type": "string", "pattern": "\\S" },
+        "dados": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["codigo"],
+          "properties": {
+            "codigo": { "enum": ["TIMEOUT", "FONTE_INDISPONIVEL", "FALHA_FERRAMENTA"] }
+          }
+        }
+      }
+    }
+  ]
+}

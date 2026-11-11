@@ -1,0 +1,80 @@
+name: Lab 04 - Chat e avaliação
+
+on:
+  pull_request:
+    paths:
+      - 'laboratorio-04/**'
+      - '.github/workflows/lab04.yml'
+  workflow_dispatch:
+    inputs:
+      avaliacao_azure:
+        description: 'Executar a avaliação real no Azure (exige variáveis e secret configurados)'
+        type: boolean
+        default: false
+      perfil:
+        description: 'Perfil Azure: eval, eval:ajuste, eval:criticos ou eval:repetir'
+        type: choice
+        options: [eval, eval:ajuste, eval:criticos, eval:repetir]
+        default: eval
+
+defaults:
+  run:
+    working-directory: laboratorio-04
+
+jobs:
+  offline:
+    name: Validação offline (sem segredos)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: laboratorio-04/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - run: npm run exemplos
+      # Ensaio SINTÉTICO: exercita os instrumentos com roteiros; não mede o modelo nem a qualidade de V2.
+      - name: Ensaio offline (sintético)
+        run: npm run eval:offline
+      - name: Publicar evidências
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lab04-offline
+          path: |
+            laboratorio-04/evidencias/
+            laboratorio-04/evidencias-exemplo/
+          if-no-files-found: warn
+
+  azure:
+    name: Avaliação real no Azure (manual)
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.avaliacao_azure }}
+    runs-on: ubuntu-latest
+    env:
+      # O deployment precisa aceitar a Responses API com function calling.
+      AZURE_OPENAI_BASE_URL: ${{ vars.AZURE_OPENAI_BASE_URL }}
+      AZURE_OPENAI_DEPLOYMENT: ${{ vars.AZURE_OPENAI_DEPLOYMENT }}
+      AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: laboratorio-04/package-lock.json
+      - run: npm ci
+      # Não sobe o Next.js nem usa BANCO_BACKEND=http: a avaliação usa a fixture em memória.
+      # Sem continue-on-error: um gate reprovado mantém o job reprovado.
+      - name: Avaliação Azure
+        run: npm run ${{ inputs.perfil }}
+      - name: Publicar evidências
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lab04-azure
+          path: laboratorio-04/evidencias/
+          if-no-files-found: warn
