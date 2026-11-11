@@ -12,10 +12,12 @@ O projeto também utiliza `AGENTS.md` para orientar os agentes de IA e especific
 
 ## Tecnologias
 
-- Node.js
-- TypeScript (strict)
+- Node.js 24, TypeScript (strict)
 - Next.js (App Router) e React
-- Jest (via `next/jest`)
+- Jest com ts-jest (testes de domínio, mock e integração); `jest.domain.config.cjs` para mutação
+- Cucumber.js com tsx (BDD)
+- Playwright Test (E2E de interface) e k6 (performance de consulta)
+- Stryker (mutação), SonarQube via Docker (análise estática) e GitHub Actions (CI)
 - Agentes de codificação
 
 ## Estrutura
@@ -23,14 +25,26 @@ O projeto também utiliza `AGENTS.md` para orientar os agentes de IA e especific
 ```text
 src/
 ├── domain/        # Conta, NumeroConta, TransferenciaValor, Recibo, ErroNegocio
-├── application/   # adaptador que liga a API ao domínio (transferencias/operacao.ts)
-├── api/           # handler HTTP testável sem servidor (transferencias/handler.ts)
-└── app/           # Next.js: página mínima e rota POST /api/transferencias
+├── application/   # adaptadores API → domínio (contas/, transferencias/) e estado-contas.ts (Map compartilhado)
+├── api/           # handlers HTTP testáveis sem servidor (contas/handlers.ts, transferencias/handler.ts)
+└── app/           # Next.js: layout, página mínima e rotas /api/contas, /api/contas/[id], /api/transferencias
 tests/
-├── domain/        # testes unitários do domínio
-└── api/           # testes do handler (mock) e de integração com o domínio real
-specs/             # especificações (fonte de verdade)
+├── domain/        # testes unitários do domínio e da classificação de erros
+├── api/           # handlers com mock e integração com o domínio real
+└── e2e/           # Playwright (fixtures/conta.ts com helpers de criação/consulta)
+features/          # Cucumber: step-definitions/ e support/world.ts
+perf/              # script k6 de consulta (consulta.ts)
+scripts/           # verificar-bdd.cjs
+specs/
+├── aula01/        # criação e transferência (regras bancárias)
+├── aula02/        # APIs, erros, mocks, BDD (.feature) e qualidade/CI
+└── laboratorio-03.md  # interface, diagnóstico e performance
+.github/workflows/ # ci.yml
 ```
+
+Arquivos de configuração na raiz: `jest.config.cjs`, `jest.domain.config.cjs`, `cucumber.cjs`, `playwright.config.ts`, `stryker.config.json`, `sonar-project.properties`, `docker-compose.yml` (SonarQube e scanner), `tsconfig*.json` (`tsconfig.build.json` e `tsconfig.k6.json` para builds específicos).
+
+Diretórios gerados e ignorados pelo Git: `dist/`, `coverage/`, `reports/`, `playwright-report/`, `test-results/`, `evidencias/`.
 
 ## Executando
 
@@ -47,15 +61,24 @@ Scripts disponíveis:
 | `npm run dev` | Servidor de desenvolvimento do Next.js |
 | `npm run build` | Build de produção do Next.js |
 | `npm start` | Executa o build de produção |
-| `npm test` | Executa a suíte Jest |
+| `npm test` | Executa a suíte Jest (ignora `tests/e2e`) |
 | `npm run test:watch` | Jest em modo watch |
 | `npm run test:coverage` | Jest com cobertura |
 | `npm run typecheck` | Verificação de tipos (`tsc --noEmit`) |
 | `npm run build:ts` | Transpila apenas `src/domain` e `tests` para `dist/` |
+| `npm run test:bdd` | Cenários Cucumber (relatórios em `reports/`) |
+| `npm run test:bdd:dry` | Valida os steps sem executar (dry-run) |
+| `npm run test:bdd:full` | Cucumber + `scripts/verificar-bdd.cjs` |
+| `npm run test:e2e` | Playwright em Chromium (executa `next start`; rode `npm run build` antes) |
+| `npm run test:e2e:headed` | Playwright com navegador visível |
+| `npm run test:e2e:report` | Abre o relatório HTML do Playwright |
+| `npm run typecheck:k6` | Verifica os tipos do script k6 |
+
+O k6 não é instalado pelo npm: instale o binário separadamente e rode, por exemplo, `k6 run -e VUS=5 perf/consulta.ts` com a aplicação no ar (`BASE_URL` padrão `http://127.0.0.1:3000`).
 
 ## API de transferências
 
-`POST /api/transferencias` (contrato em `specs/api-transferencias.md`):
+`POST /api/transferencias` (contrato em `specs/aula02/api-transferencias.md`):
 
 ```bash
 curl -X POST localhost:3000/api/transferencias \
@@ -72,4 +95,4 @@ Erros retornam `{"erro":"<CODIGO>"}`:
 | 422 | `MESMA_CONTA`, `SALDO_INSUFICIENTE` |
 | 500 | `ERRO_INTERNO` |
 
-A rota usa um cadastro em memória didático (contas `123456` com saldo 1000 e `654321` com 200). O estado é perdido ao reiniciar e não há suporte a concorrência.
+As rotas de contas (`/api/contas`, `/api/contas/[id]`, contrato em `specs/aula02/api-contas.md`) e de transferência compartilham o mesmo `Map` em memória (`src/application/estado-contas.ts`), inicialmente vazio: crie as contas pela API antes de transferir. O estado vale só no mesmo processo e é perdido ao reiniciar; não há persistência, concorrência nem transação.
