@@ -6,9 +6,20 @@ Construir um chat pequeno durante a aula e acrescentar depois os testes da aplic
 
 As alternativas consideradas foram entregar o assistente pronto, construir a interface e a infraestrutura manualmente ou gerar o código em três etapas a partir de specs. A terceira é a recomendação deste pacote, seguindo o pedido de construir com a turma e preservar o tempo de testes.
 
-Decisões propostas pelo autor: aplicação independente em `laboratorio-04/`; Node.js 24, TypeScript e Express; frontend estático no mesmo processo; Jest/Supertest nos testes; Promptfoo na avaliação. A implementação dos detalhes internos e o desenho visual simples ficam a cargo do agente.
+Decisões do autor: aplicação independente em `laboratorio-04/`; Node.js 24, **TypeScript** e **Next.js (App Router)** como adaptador HTTP, com React apenas para uma página mínima; **testes em TypeScript** com Jest e `next/jest`; Promptfoo na avaliação. A implementação dos detalhes internos e o desenho visual simples ficam a cargo do agente.
 
-Não há banco de dados, movimentação financeira, integração às APIs anteriores, login corporativo, RAG com indexação, streaming ou implantação em nuvem. Contexto externo aqui é um texto de fixture, sem mecanismo de busca.
+Não há banco de dados próprio, movimentação financeira, login corporativo, RAG com indexação, streaming ou implantação em nuvem. Contexto externo aqui é um texto de fixture, sem mecanismo de busca. A única integração com as aulas anteriores é a **leitura de saldos por HTTP** na aplicação bancária (seção 5).
+
+## 1.1. Arquitetura: dois projetos Next.js ligados por HTTP
+
+| Projeto | Papel | Porta |
+| --- | --- | --- |
+| Raiz do repositório (Aulas 01–03) | Aplicação bancária: domínio `Conta`, rotas `/api/contas` e `/api/transferencias` | 3000 |
+| `laboratorio-04/` | Chat didático: núcleo do assistente, cliente de modelo, ferramentas, tela e API do chat | 3004 |
+
+Os dois são aplicações Next.js independentes, com `package.json`, dependências e testes próprios. A ligação entre eles é **somente HTTP**: o chat é cliente de `GET /api/contas/{id}`. Não importar código de um projeto no outro, não compartilhar `node_modules` nem banco. Dentro do `laboratorio-04/`, o Next.js é só o adaptador: o núcleo (`src/assistente.ts`, `src/dominio/`, `src/modelo/`, `src/banco/`) não importa `next/*`, `react` nem usa `Request`/`Response`, e pode ser chamado por testes, smoke e avaliação sem iniciar o Next.
+
+Seguir a mesma divisão da aplicação da raiz: `src/app/**/route.ts` finos, que só exportam os verbos HTTP e delegam a factories em `src/api/**` (por exemplo `criarPostChat(deps)`), com dependências injetadas. Cada factory valida somente o transporte (JSON, objeto, campos e `typeof`, tamanho) e traduz resultados do núcleo para HTTP. O estado compartilhado (sessões, cliente de modelo, trace) é criado de forma preguiçosa e memoizada em `globalThis`, nunca no import nem no build, como em `src/application/armazenamento.ts` da raiz. Rotas usam `runtime = 'nodejs'` e `dynamic = 'force-dynamic'`.
 
 ## 2. Etapas e dependências
 
@@ -30,15 +41,15 @@ Somente o backend acessa o modelo. `MODEL_PROVIDER=fake` é o padrão local; `az
 | `AZURE_OPENAI_API_KEY` | Chave preenchida somente no `.env` local |
 | `AZURE_OPENAI_DEPLOYMENT` | Nome do deployment, usado em `model` |
 
-A base pode usar o hostname do recurso aceito pelo Azure para essa API. Validar o formato; rejeitar URL de projeto, caminho `/models`, URL completa `/chat/completions` e query string. Não tentar adivinhar ou converter silenciosamente outro protocolo. Acrescentar apenas a barra final quando necessário.
+A base pode usar o hostname do recurso aceito pelo Azure para essa API. Validar o formato; rejeitar URL de projeto, caminho `/models`, URL completa de endpoint (`/chat/completions` ou `/responses`) e query string. Não tentar adivinhar ou converter silenciosamente outro protocolo. Acrescentar apenas a barra final quando necessário.
 
-Usar o pacote `openai`, cliente `OpenAI` com `baseURL` e `apiKey`, método `chat.completions.create`, ferramentas `type: function`, `tool_choice: auto` e `parallel_tool_calls: false`. O recorte v1 não usa `api-version`. Não usar Foundry Agent Service, `project endpoint` nem SDK de agentes para este chat.
+Usar o pacote `openai`, cliente `OpenAI` com `baseURL` e `apiKey`, método `responses.create` (Responses API), ferramentas `type: function` no formato plano (`name`, `description`, `parameters` no nível do item), `tool_choice: auto`, `parallel_tool_calls: false` e `store: false`. O contrato comum de mensagens (`system`/`user`/`assistant`/`tool`, `tool_calls`) é convertido para itens `function_call` e `function_call_output` somente dentro do `AzureModelClient`; resultado e `call_id` voltam como `tool_calls[].id`. O recorte v1 não usa `api-version`. Não usar Foundry Agent Service, `project endpoint` nem SDK de agentes para este chat.
 
-Exigir um deployment que aceite Chat Completions e function calling. Não fixar um nome de modelo que o professor talvez não tenha. O smoke verifica essa combinação. O núcleo pede JSON por instrução e valida o resultado localmente; não depende de suporte a structured outputs.
+Exigir um deployment que aceite a Responses API com function calling. Atenção: modelos de raciocínio (por exemplo `gpt-6.1-sol`) rejeitam function tools em `/chat/completions` (HTTP 400, `param: reasoning_effort`) e não aceitam `reasoning_effort: none`; por isso a Responses API é o caminho padrão. Não enviar `reasoning` na configuração básica. Não fixar um nome de modelo que o professor talvez não tenha. O smoke verifica essa combinação. O núcleo pede JSON por instrução e valida o resultado localmente; não depende de suporte a structured outputs.
 
 Não enviar `temperature`, `seed` ou `response_format` na configuração básica. Isso reduz parâmetros que variam entre famílias de modelos. Registrar que foram omitidos. Caso o professor opte por acrescentá-los, usar a mesma configuração nas duas versões e registrar a mudança.
 
-Configurações adicionais, com padrão: `PORT=3004`, `AZURE_OPENAI_TIMEOUT_MS=20000`, `ASSISTANT_MAX_ROUNDS=4`. Desabilitar retries automáticos no SDK na avaliação (`maxRetries: 0`). Em erro Azure, registrar `infra_error`, sem trocar automaticamente para o modo fake.
+Configurações adicionais, com padrão: `AZURE_OPENAI_TIMEOUT_MS=20000`, `ASSISTANT_MAX_ROUNDS=4`, `BANCO_BACKEND=http`, `BANCO_API_BASE_URL=http://127.0.0.1:3000`, `BANCO_API_TIMEOUT_MS=5000`, `CHAT_CONTAS_AUTORIZADAS=123456,654321`. Desabilitar retries automáticos no SDK na avaliação (`maxRetries: 0`). Em erro Azure, registrar `infra_error`, sem trocar automaticamente para o modo fake. A porta 3004 é definida pelos scripts (`-p 3004`); o código não lê `PORT`. O Next.js carrega `.env` e `.env.local` sozinho; scripts `tsx` usam `process.loadEnvFile` do Node 24, sem `dotenv`.
 
 As variáveis Azure não são necessárias para criar a tela, testar regras ou executar o ensaio roteirizado. Não pedir a chave no frontend, no código, no prompt enviado ao agente nem neste material.
 
@@ -49,19 +60,19 @@ Estado inicial de uma sessão do chat:
 ```json
 {
   "usuarioId": "aluno-demo",
-  "contasAutorizadas": ["1001", "2002"],
-  "saldosCentavos": {"1001": 10000, "2002": 2000},
+  "contasAutorizadas": ["123456", "654321"],
+  "saldosCentavos": {"123456": 10000, "654321": 2000},
   "falhas": {}
 }
 ```
 
-O servidor cria esse estado. O cliente não informa saldos, identidade, permissões, fixture ou oráculo. Cada sessão tem sua cópia. Cada caso de avaliação começa de um estado novo, definido pelo próprio fixture.
+Esse é o formato da fixture em memória, com as contas `123456`/`654321` (seis dígitos, como na aplicação bancária). No backend `http`, o servidor cria apenas identidade e `contasAutorizadas` (as mesmas contas); os saldos vêm da aplicação bancária por `GET`. O servidor cria esse estado. O cliente não informa saldos, identidade, permissões, fixture ou oráculo. Cada sessão tem sua cópia. Cada caso de avaliação começa de um estado novo, definido pelo próprio fixture.
 
 O modelo recebe a identidade sintética e as contas autorizadas, a mensagem e o contexto externo delimitado. Saldos só chegam a ele por resultados de ferramentas. Não enviar `esperado`, `criticidade`, políticas de falha injetada ou o mapa privado de saldos como contexto.
 
 O histórico fica no servidor, vinculado a um `sessionId` aleatório. Conservar no máximo os últimos 10 turnos completos, sem cortar uma sequência de `tool_calls` e mensagens `tool`. Nova conversa limpa o histórico. Casos de avaliação usam histórico vazio.
 
-O servidor de aula escuta em `127.0.0.1`. Sua sessão sintética não implementa autenticação de produção.
+O servidor de aula escuta em `127.0.0.1` (`next dev`/`next start` com `-H 127.0.0.1`). Sua sessão sintética não implementa autenticação de produção.
 
 ## 5. Ferramentas
 
@@ -75,6 +86,8 @@ Todos os valores monetários são **inteiros em centavos**. Contas são strings.
 Para a simulação, ambas as contas devem estar autorizadas e ser diferentes. O saldo da origem deve cobrir o valor. O cálculo previsto é `origem − valor` e `destino + valor`. A ferramenta lê os saldos atuais e retorna uma projeção; não altera o estado.
 
 Erros de ferramenta retornam `{ok:false, codigo, mensagem}`. Códigos: `NAO_AUTORIZADO`, `DADOS_INVALIDOS`, `VALOR_INVALIDO`, `SALDO_INSUFICIENTE`, `FONTE_INDISPONIVEL`, `TIMEOUT` e `FERRAMENTA_PROIBIDA`. Mensagens não revelam saldo nem existência de conta não autorizada.
+
+**Origem dos saldos.** As ferramentas leem contas por um `ContasGateway`. No chat de aula o gateway é HTTP, somente `GET`, contra a aplicação bancária das Aulas 01–03 (`BANCO_BACKEND=http`, `BANCO_API_BASE_URL`, padrão `http://127.0.0.1:3000`); `simularTransferencia` nunca chama `POST /api/transferencias`, pois ele executa a transferência. Testes (Spec 02), avaliação (Spec 03) e `smoke -- offline` usam sempre o gateway em memória com fixtures, para manter determinismo. Detalhes e mapeamento de erros estão na Spec 01, seção "Integração com a aplicação bancária".
 
 Em fixture, saldo `null` representa fonte indisponível. `falhas.consultarSaldo="TIMEOUT"` ou `falhas.simularTransferencia="TIMEOUT"` injeta erro local da ferramenta. Não é necessário aguardar uma rede real para simular essa falha.
 
@@ -103,8 +116,8 @@ Exemplo após a simulação de R$ 30,00:
   "acao": "simular",
   "mensagem": "Simulação concluída. Nenhuma transferência foi executada.",
   "dados": {
-    "origemId": "1001",
-    "destinoId": "2002",
+    "origemId": "123456",
+    "destinoId": "654321",
     "valorCentavos": 3000,
     "saldoOrigemAtualCentavos": 10000,
     "saldoDestinoAtualCentavos": 2000,
@@ -144,13 +157,13 @@ O modo fake implementa a mesma interface `ModelClient`. Seus roteiros produzem c
 | `DELETE /api/sessions/:id` | Descarta sessão e histórico; retorna 204, inclusive se já ausente |
 | `POST /api/chat` | Recebe apenas `{sessionId, mensagem, versao:"v1"\|"v2"}` |
 
-`mensagem`: 1–2000 caracteres após trim. Rejeitar campos extras. `sessionId` inexistente retorna 404. JSON malformado, mensagem inválida e versão inválida retornam 400. Payload JSON limitado a 16 KB; excedente retorna 413. Erros de transporte não chamam o modelo.
+`mensagem`: 1–2000 caracteres após trim. Rejeitar campos extras. `sessionId` inexistente retorna 404. JSON malformado, mensagem inválida e versão inválida retornam 400. Payload JSON limitado a 16 KB; excedente retorna 413. O Next.js não limita o corpo de Route Handlers: a factory lê o corpo com limite de bytes (`Content-Length` e leitura real) e rejeita sem chamar o modelo. Erros de transporte não chamam o modelo.
 
 Envelope de chat: `{traceId, modo, status, outputRaw, resposta, chamadasResumo, erro}`. `erro` é `null` no status `ok`; nos demais, contém `{codigo,mensagem}` sanitizados. `chamadasResumo` lista nome e status, sem argumentos ou resultados privados. HTTP 200 para `ok` e `invalid_output`, 502 para `infra_error`, 500 para `runtime_error`. A tela diferencia esses estados e não transforma HTTP 200 em aprovação de qualidade.
 
 Tela única: histórico, entrada, botão enviar, botão nova conversa, seletor V1/V2, indicador real/roteirizado e área expansível de JSON e chamadas. Bloquear duplo envio durante a requisição e preservar a conversa em erro. A versão escolhida é registrada por turno. A nova instrução substitui a seleção anterior; o histórico é dado da conversa, não uma segunda instrução de sistema.
 
-Usar `textContent` ou equivalente seguro para mensagens e conteúdo bruto. Não inserir resposta do modelo em `innerHTML`.
+Renderizar mensagens e conteúdo bruto como texto React (escapado por padrão). Não usar `dangerouslySetInnerHTML` nem `innerHTML` com saída do modelo.
 
 ## 9. Trace
 
