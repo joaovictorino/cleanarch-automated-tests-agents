@@ -1,4 +1,4 @@
-name: Chat e avaliação
+name: Chat e avaliação - Laboratorio 04
 
 on:
   pull_request:
