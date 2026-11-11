@@ -8,7 +8,7 @@ V1 é uma instrução mínima (um parágrafo) e V2, uma candidata mais detalhada
 
 ## Material e arquivos
 
-Copiar `dataset/casos.json` e `dataset/ajuste.json` e a pasta `templates/` (`RELATORIO.md`, `RUBRICA.md`), que estão na raiz do repositório, para `laboratorio-04/dataset/` e `laboratorio-04/templates/`. Os prompts V1/V2 já estão em `laboratorio-04/prompts/` desde a etapa 01. Não colocar o dataset em `public/`, nem importá-lo por qualquer código de `src/`. O dataset usa as contas `123456`, `654321` e `999999`, as mesmas da fixture em memória; não alterar casos nem oráculos para acomodar o resultado da execução.
+Copiar `dataset/casos.json` e `dataset/ajuste.json` e a pasta `templates/` (`RELATORIO.md`, `RUBRICA.md`), que estão na raiz do repositório, para `project-chat/dataset/` e `project-chat/templates/`. Os prompts V1/V2 já estão em `project-chat/prompts/` desde a etapa 01. Não colocar o dataset em `public/`, nem importá-lo por qualquer código de `src/`. O dataset usa as contas `123456`, `654321` e `999999`, as mesmas da fixture em memória; não alterar casos nem oráculos para acomodar o resultado da execução.
 
 O Promptfoo é `devDependency`: nada em `src/` o importa, e o chat e a avaliação compartilham somente o núcleo. Esta é a primeira etapa em que o Promptfoo pode ser instalado.
 
@@ -31,7 +31,7 @@ Criar na aplicação:
 
 Usar Promptfoo como dependência local com versão direta exata e lockfile. Na implementação, consultar os tipos/documentação dessa versão para confirmar se ela carrega configuração, provider e asserções em TypeScript (via `tsx`), o formato de prompt rotulado, metadados e resultados. Se a versão fixada não carregar TypeScript, é permitido um único shim `.cjs` mínimo por ponto de entrada que registre `tsx/cjs` e delegue ao arquivo `.ts`; registrar a decisão e não duplicar lógica no shim. Não depender de um formato presumido de versões futuras.
 
-**Execução e módulos.** Todos os comandos rodam a partir de `laboratorio-04/` (o núcleo resolve `prompts/` e `schemas/` pelo diretório de trabalho). O provider importa apenas o núcleo: `src/assistente.ts`, `src/fabrica.ts`, `src/config.ts`, `src/prompts.ts`, `src/trace.ts`, `src/dominio/*` e `src/banco/ContasMemoriaGateway.ts`. Não importa `src/app/**`, `src/api/**` nem `src/application/contexto.ts` (estado global do servidor), e não inicia o Next.js. Os testes de `tests/evaluation/` rodam no Jest da etapa 02 e entram em `npm test`, sempre offline.
+**Execução e módulos.** Todos os comandos rodam a partir de `project-chat/` (o núcleo resolve `prompts/` e `schemas/` pelo diretório de trabalho). O provider importa apenas o núcleo: `src/assistente.ts`, `src/fabrica.ts`, `src/config.ts`, `src/prompts.ts`, `src/trace.ts`, `src/dominio/*` e `src/banco/ContasMemoriaGateway.ts`. Não importa `src/app/**`, `src/api/**` nem `src/application/contexto.ts` (estado global do servidor), e não inicia o Next.js. Os testes de `tests/evaluation/` rodam no Jest da etapa 02 e entram em `npm test`, sempre offline.
 
 ## Dataset e oráculos
 
@@ -151,7 +151,7 @@ No offline, rotular o gate como verificação sintética dos instrumentos; nunca
 
 ## Integração contínua
 
-Em PR, no diretório `laboratorio-04/` (Node 24, `package-lock.json` do subprojeto): `npm ci`, `npm run typecheck`, `npm test`, `npm run build` e `npm run exemplos`, sem segredos. O ensaio offline pode executar e deve ser identificado como tal.
+Em PR, no diretório `project-chat/` (Node 24, `package-lock.json` do subprojeto): `npm ci`, `npm run typecheck`, `npm test`, `npm run build` e `npm run exemplos`, sem segredos. O ensaio offline pode executar e deve ser identificado como tal.
 
 Avaliação Azure somente em disparo manual configurado pelo professor, com URL/deployment em variáveis e chave em secret. O deployment precisa aceitar a Responses API com function calling (um modelo de raciocínio rejeita ferramentas em Chat Completions). O workflow não sobe a aplicação Next.js nem usa `BANCO_BACKEND=http`. Publicar os artefatos em `always()` mesmo em falha, sem `.env` ou credenciais. O workflow conserva a reprovação; não usa `continue-on-error` para aprovar um gate falho. Não é necessário executar o workflow em uma conta real para concluir a geração do código.
 

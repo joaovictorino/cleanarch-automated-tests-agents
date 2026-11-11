@@ -6,7 +6,7 @@ Construir um chat pequeno durante a aula e acrescentar depois os testes da aplic
 
 As alternativas consideradas foram entregar o assistente pronto, construir a interface e a infraestrutura manualmente ou gerar o código em três etapas a partir de specs. A terceira é a recomendação deste pacote, seguindo o pedido de construir com a turma e preservar o tempo de testes.
 
-Decisões do autor: aplicação independente em `laboratorio-04/`; Node.js 24, **TypeScript** e **Next.js (App Router)** como adaptador HTTP, com React apenas para uma página mínima; **testes em TypeScript** com Jest e `next/jest`; Promptfoo na avaliação. A implementação dos detalhes internos e o desenho visual simples ficam a cargo do agente.
+Decisões do autor: aplicação independente em `project-chat/`; Node.js 24, **TypeScript** e **Next.js (App Router)** como adaptador HTTP, com React apenas para uma página mínima; **testes em TypeScript** com Jest e `next/jest`; Promptfoo na avaliação. A implementação dos detalhes internos e o desenho visual simples ficam a cargo do agente.
 
 Não há banco de dados próprio, movimentação financeira, login corporativo, RAG com indexação, streaming ou implantação em nuvem. Contexto externo aqui é um texto de fixture, sem mecanismo de busca. A única integração com as aulas anteriores é a **leitura de saldos por HTTP** na aplicação bancária (seção 5).
 
@@ -15,9 +15,9 @@ Não há banco de dados próprio, movimentação financeira, login corporativo, 
 | Projeto | Papel | Porta |
 | --- | --- | --- |
 | Raiz do repositório (Aulas 01–03) | Aplicação bancária: domínio `Conta`, rotas `/api/contas` e `/api/transferencias` | 3000 |
-| `laboratorio-04/` | Chat didático: núcleo do assistente, cliente de modelo, ferramentas, tela e API do chat | 3004 |
+| `project-chat/` | Chat didático: núcleo do assistente, cliente de modelo, ferramentas, tela e API do chat | 3004 |
 
-Os dois são aplicações Next.js independentes, com `package.json`, dependências e testes próprios. A ligação entre eles é **somente HTTP**: o chat é cliente de `GET /api/contas/{id}`. Não importar código de um projeto no outro, não compartilhar `node_modules` nem banco. Dentro do `laboratorio-04/`, o Next.js é só o adaptador: o núcleo (`src/assistente.ts`, `src/dominio/`, `src/modelo/`, `src/banco/`) não importa `next/*`, `react` nem usa `Request`/`Response`, e pode ser chamado por testes, smoke e avaliação sem iniciar o Next.
+Os dois são aplicações Next.js independentes, com `package.json`, dependências e testes próprios. A ligação entre eles é **somente HTTP**: o chat é cliente de `GET /api/contas/{id}`. Não importar código de um projeto no outro, não compartilhar `node_modules` nem banco. Dentro do `project-chat/`, o Next.js é só o adaptador: o núcleo (`src/assistente.ts`, `src/dominio/`, `src/modelo/`, `src/banco/`) não importa `next/*`, `react` nem usa `Request`/`Response`, e pode ser chamado por testes, smoke e avaliação sem iniciar o Next.
 
 Seguir a mesma divisão da aplicação da raiz: `src/app/**/route.ts` finos, que só exportam os verbos HTTP e delegam a factories em `src/api/**` (por exemplo `criarPostChat(deps)`), com dependências injetadas. Cada factory valida somente o transporte (JSON, objeto, campos e `typeof`, tamanho) e traduz resultados do núcleo para HTTP. O estado compartilhado (sessões, cliente de modelo, trace) é criado de forma preguiçosa e memoizada em `globalThis`, nunca no import nem no build, como em `src/application/armazenamento.ts` da raiz. Rotas usam `runtime = 'nodejs'` e `dynamic = 'force-dynamic'`.
 
