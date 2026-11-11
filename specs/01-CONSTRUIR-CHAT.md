@@ -4,11 +4,11 @@
 
 Criar uma aplicação executável que a turma consiga explorar antes de escrever a suíte automatizada. Aplicar integralmente `SPEC_LABORATORIO_04_CHAT.md`.
 
-O projeto é **novo**: criar `laboratorio-04/` do zero, como aplicação Next.js independente com `package.json` e `node_modules` próprios. Se a pasta já existir, não sobrescrever nem apagar nada: descrever o que há e parar. Não importar nem copiar código do projeto da raiz; a única ligação é HTTP (seção "Integração com a aplicação bancária"). Nesta etapa, não instalar Jest ou Promptfoo, não criar dataset executável de avaliação e não gerar resultados de qualidade.
+O projeto é **novo**: criar `project-chat/` do zero, como aplicação Next.js independente com `package.json` e `node_modules` próprios. Se a pasta já existir, não sobrescrever nem apagar nada: descrever o que há e parar. Não importar nem copiar código do projeto da raiz; a única ligação é HTTP (seção "Integração com a aplicação bancária"). Nesta etapa, não instalar Jest ou Promptfoo, não criar dataset executável de avaliação e não gerar resultados de qualidade.
 
 ## Arquivos a produzir na aplicação
 
-| Caminho relativo a `laboratorio-04/` | Responsabilidade |
+| Caminho relativo a `project-chat/` | Responsabilidade |
 | --- | --- |
 | `package.json`, `package-lock.json`, `tsconfig.json`, `next.config.ts` | Next.js + TypeScript strict, dependências exatas, build e typecheck |
 | `.env.example`, `.gitignore` | Configuração por ambiente (modelo e banco) e exclusões. O `.env.example` lista **somente os nomes** das variáveis, sem valores, chaves ou tokens; não copiar o `.env.example` da raiz |
@@ -101,7 +101,7 @@ Os três exemplos do fake usam as contas do backend ativo (`123456`/`654321` no 
 
 ## Prompt e resposta
 
-Criar `base.txt` com o escopo de consulta/simulação e o contrato JSON completo. Copiar `prompts/v1.txt` e `prompts/v2.txt`, que já estão na raiz do repositório, para `laboratorio-04/prompts/`, sem incluir IDs de casos ou respostas do dataset. Não copiar `dataset/` nem `templates/` nesta etapa. Compor a base fixa e o prompt selecionado de modo idêntico em chat, smoke e avaliação.
+Criar `base.txt` com o escopo de consulta/simulação e o contrato JSON completo. Copiar `prompts/v1.txt` e `prompts/v2.txt`, que já estão na raiz do repositório, para `project-chat/prompts/`, sem incluir IDs de casos ou respostas do dataset. Não copiar `dataset/` nem `templates/` nesta etapa. Compor a base fixa e o prompt selecionado de modo idêntico em chat, smoke e avaliação.
 
 Não forçar uma resposta JSON fabricada no backend. Em saída inválida, mostrar aviso e resposta bruta em área de texto segura. Registrar o erro sem apagar a conversa anterior.
 

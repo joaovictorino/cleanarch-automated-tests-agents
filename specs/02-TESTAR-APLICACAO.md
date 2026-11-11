@@ -71,7 +71,7 @@ Manter o smoke da etapa 01 separado de `npm test`. A ausência de credenciais nu
 
 O smoke com `BANCO_BACKEND=http` e a verificação manual contra a aplicação bancária (`npm run dev` da raiz, porta 3000, com as contas `123456` e `654321` já existentes) ficam fora de `npm test`, como o smoke Azure.
 
-Smoke manual das rotas do chat (prova a composição que as factories não provam): com `npm run dev` em `laboratorio-04/`, `curl -X POST localhost:3004/api/sessions`, `curl localhost:3004/api/health` e um `curl -X POST localhost:3004/api/chat` com o `sessionId` retornado e uma frase do modo fake. Registrar no relatório que isso foi feito manualmente.
+Smoke manual das rotas do chat (prova a composição que as factories não provam): com `npm run dev` em `project-chat/`, `curl -X POST localhost:3004/api/sessions`, `curl localhost:3004/api/health` e um `curl -X POST localhost:3004/api/chat` com o `sessionId` retornado e uma frase do modo fake. Registrar no relatório que isso foi feito manualmente.
 
 ## Evidência de que os testes detectam defeitos
 
