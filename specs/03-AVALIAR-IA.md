@@ -4,27 +4,34 @@
 
 Avaliar o mesmo núcleo usado no chat, comparar V1 e V2 nos 12 casos congelados e investigar respostas e ferramentas com evidência. Esta etapa mede decisões do modelo no modo Azure; no modo fake, somente exercita os instrumentos.
 
+V1 é uma instrução mínima (um parágrafo) e V2, uma candidata mais detalhada (passo a passo de dez itens). Compará-las com a mesma base, o mesmo schema, as mesmas ferramentas e políticas mostra o efeito do texto de orientação, não de permissões diferentes. A autorização e a validação ficam no código e valem para as duas.
+
 ## Material e arquivos
 
-Copiar `dataset/casos.json`, `dataset/ajuste.json`, os prompts e os templates deste pacote para a aplicação. Não colocar o dataset em `public/`.
+Copiar `dataset/casos.json` e `dataset/ajuste.json` e a pasta `templates/` (`RELATORIO.md`, `RUBRICA.md`), que estão na raiz do repositório, para `laboratorio-04/dataset/` e `laboratorio-04/templates/`. Os prompts V1/V2 já estão em `laboratorio-04/prompts/` desde a etapa 01. Não colocar o dataset em `public/`, nem importá-lo por qualquer código de `src/`. O dataset usa as contas `123456`, `654321` e `999999`, as mesmas da fixture em memória; não alterar casos nem oráculos para acomodar o resultado da execução.
+
+O Promptfoo é `devDependency`: nada em `src/` o importa, e o chat e a avaliação compartilham somente o núcleo. Esta é a primeira etapa em que o Promptfoo pode ser instalado.
 
 Criar na aplicação:
 
 | Caminho | Responsabilidade |
 | --- | --- |
-| `promptfooconfig.cjs` | Configuração local e matriz V1 × V2 |
-| `providers/assistente.cjs` | Provider que importa `dist/assistente.js` |
-| `assertions/contrato.cjs` | Validação do JSON bruto com o schema comum |
-| `assertions/comportamento.cjs` | Ação/dados/ferramentas esperados por caso |
-| `assertions/seguranca.cjs` | Tentativas proibidas, autorização e saldos |
-| `scripts/avaliar.cjs` | Wrapper com runId, build, execução, status e evidências |
-| `scripts/comparar.cjs` | Resumo por caso, categoria e dimensão |
-| `scripts/controles-negativos.cjs` | Controles sintéticos dos instrumentos |
-| `tests/evaluation/*.test.cjs` | Testes de vazamento, asserções e comparação |
+| `promptfooconfig.ts` | Configuração local e matriz V1 × V2 |
+| `providers/assistente.ts` | Provider que importa `src/assistente.ts` |
+| `providers/roteiros-offline.ts` | Roteiros sintéticos por caso para o modo offline, usados com o `ScriptedModelClient` |
+| `assertions/contrato.ts` | Validação do JSON bruto com o schema comum |
+| `assertions/comportamento.ts` | Ação/dados/ferramentas esperados por caso |
+| `assertions/seguranca.ts` | Tentativas proibidas, autorização e saldos |
+| `scripts/avaliar.ts` | Wrapper com runId, typecheck, execução, status e evidências |
+| `scripts/comparar.ts` | Resumo por caso, categoria e dimensão |
+| `scripts/controles-negativos.ts` | Controles sintéticos dos instrumentos |
+| `tests/evaluation/*.test.ts` | Testes de vazamento, asserções e comparação |
 | `evidencias-exemplo/README.md` | Identificação dos controles sintéticos |
 | `.github/workflows/lab04.yml` | Validação offline em PR e avaliação real manual opcional |
 
-Usar Promptfoo como dependência local com versão direta exata e lockfile. Na implementação, consultar os tipos/documentação dessa versão para confirmar configuração `.cjs`, formato de prompt rotulado, metadados e resultados. Não depender de um formato presumido de versões futuras.
+Usar Promptfoo como dependência local com versão direta exata e lockfile. Na implementação, consultar os tipos/documentação dessa versão para confirmar se ela carrega configuração, provider e asserções em TypeScript (via `tsx`), o formato de prompt rotulado, metadados e resultados. Se a versão fixada não carregar TypeScript, é permitido um único shim `.cjs` mínimo por ponto de entrada que registre `tsx/cjs` e delegue ao arquivo `.ts`; registrar a decisão e não duplicar lógica no shim. Não depender de um formato presumido de versões futuras.
+
+**Execução e módulos.** Todos os comandos rodam a partir de `laboratorio-04/` (o núcleo resolve `prompts/` e `schemas/` pelo diretório de trabalho). O provider importa apenas o núcleo: `src/assistente.ts`, `src/fabrica.ts`, `src/config.ts`, `src/prompts.ts`, `src/trace.ts`, `src/dominio/*` e `src/banco/ContasMemoriaGateway.ts`. Não importa `src/app/**`, `src/api/**` nem `src/application/contexto.ts` (estado global do servidor), e não inicia o Next.js. Os testes de `tests/evaluation/` rodam no Jest da etapa 02 e entram em `npm test`, sempre offline.
 
 ## Dataset e oráculos
 
@@ -47,11 +54,11 @@ Implementar a interface `id()` e `callApi(prompt, context)`. O argumento `prompt
 
 Para cada célula da matriz:
 
-1. Criar sessão privada e histórico vazio a partir de `ambiente`.
-2. Construir o cliente do modo explícito e as mesmas ferramentas/dispatcher da aplicação.
+1. Criar sessão privada e histórico vazio a partir de `ambiente`, que tem a forma de `EstadoSessao` (`usuarioId`, `contasAutorizadas`, `saldosCentavos`, `falhas`). Validar o formato antes de usar e falhar com erro claro se divergir.
+2. Construir o cliente do modo explícito com `carregarConfig` e `criarModelClient` de `src/fabrica.ts`, a mesma classe usada pelo chat (no Azure, `maxRetries: 0`), passando `BANCO_BACKEND=memoria` na configuração; o `ContasMemoriaGateway` alimentado pelo `ambiente` do caso e as mesmas ferramentas/dispatcher da aplicação. A avaliação **nunca** usa `ContasHttpGateway`: o dataset depende de saldos, `null` e falhas injetadas determinísticos, e não pode depender de uma aplicação bancária no ar nem de seu estado. Os identificadores do dataset (`123456`, `654321`, `999999` etc.) pertencem à fixture em memória; ids malformados de propósito (por exemplo `77777`) continuam nos casos de dados inválidos.
 3. Passar mensagem, contexto, sessão e prompt para `executarTurno`.
 4. Persistir trace e retornar o conteúdo final bruto em `output`.
-5. Retornar em `metadata` o trace, modo, versão, caseId e runId para asserções locais.
+5. Retornar em `metadata` o trace, modo, backend (`memoria`), versão, caseId e runId para asserções locais.
 
 O `output` do Promptfoo é somente `outputRaw`, não um envelope com resposta já corrigida ou status de aprovação. Asserções de ferramentas acessam `context.providerResponse.metadata.trace` conforme o contrato da versão instalada. A ausência de metadado necessário reprova a verificação.
 
@@ -103,6 +110,8 @@ O comando `npm run exemplos` retorna sucesso quando os quatro defeitos são dete
 
 ## Scripts e execução
 
+O agente que implementa esta etapa **prepara** os comandos Azure (`eval`, `eval:ajuste`, `eval:criticos`, `eval:repetir`), mas não os executa por conta própria, nem porque exista um `.env` ou variáveis Azure no ambiente: a execução real é um ato explícito do professor. Validar só o que roda offline e declarar que o Azure não foi executado.
+
 | Comando | Comportamento |
 | --- | --- |
 | `npm run eval` | Matriz completa no modo Azure; exige as três variáveis e nunca usa fake silenciosamente |
@@ -113,9 +122,9 @@ O comando `npm run exemplos` retorna sucesso quando os quatro defeitos são dete
 | `npm run view` | Abre o visualizador local do Promptfoo |
 | `npm run exemplos` | Executa os quatro controles negativos |
 
-`scripts/avaliar.cjs` cria um `runId` novo, compila o projeto e invoca o binário local do Promptfoo com `--no-cache --max-concurrency 1 --no-share` e exportação JSON no diretório da execução. Repetições usam `--repeat 3`. Transmitir o modo para o subprocesso explicitamente, sem editar `.env`.
+`scripts/avaliar.ts` (executado com `tsx`) cria um `runId` novo, roda `npm run typecheck` e invoca o binário local do Promptfoo com `--no-cache --max-concurrency 1 --no-share` e exportação JSON no diretório da execução. Repetições usam `--repeat 3`. Transmitir o modo para o subprocesso explicitamente, sem editar `.env`. Os scripts de `package.json` chamam `tsx scripts/avaliar.ts <perfil>` (`azure`, `offline`, `ajuste`, `criticos`, `repetir`); o `.env` é carregado com `process.loadEnvFile`, e nunca é lido nem impresso pelo agente.
 
-No offline, injetar um `ScriptedModelClient` com sequências próprias por caso. Ele não importa `esperado` para produzir a resposta e não recebe o prompt como regra interpretada. Exercitar o tool loop. V1/V2 devem empatar; isso verifica consistência dos instrumentos, não sensibilidade do modelo às instruções.
+No offline, injetar o `ScriptedModelClient` de `tests/support/ScriptedModelClient.ts` com sequências próprias por caso, escritas em `providers/roteiros-offline.ts` (se for necessário movê-lo para fora de `tests/`, registrar a decisão). Ele não importa `esperado` para produzir a resposta e não recebe o prompt como regra interpretada. Exercitar o tool loop. V1/V2 devem empatar; isso verifica consistência dos instrumentos, não sensibilidade do modelo às instruções.
 
 Conservar stdout/stderr em `terminal.txt`; gerar comparação em bloco de finalização mesmo se houver reprovações. Propagar o exit code original do Promptfoo; se o runner tiver êxito mas os artefatos estiverem incompletos ou o wrapper falhar, retornar não zero. Interrupção ou falha de build gera manifesto incompleto e nenhuma alegação de matriz concluída. Não usar `|| true`.
 
@@ -142,14 +151,16 @@ No offline, rotular o gate como verificação sintética dos instrumentos; nunca
 
 ## Integração contínua
 
-Em PR: `npm ci`, typecheck, testes determinísticos e controles negativos, sem segredos. O ensaio offline pode executar e deve ser identificado como tal.
+Em PR, no diretório `laboratorio-04/` (Node 24, `package-lock.json` do subprojeto): `npm ci`, `npm run typecheck`, `npm test`, `npm run build` e `npm run exemplos`, sem segredos. O ensaio offline pode executar e deve ser identificado como tal.
 
-Avaliação Azure somente em disparo manual configurado pelo professor, com URL/deployment em variáveis e chave em secret. Publicar os artefatos em `always()` mesmo em falha, sem `.env` ou credenciais. O workflow conserva a reprovação; não usa `continue-on-error` para aprovar um gate falho. Não é necessário executar o workflow em uma conta real para concluir a geração do código.
+Avaliação Azure somente em disparo manual configurado pelo professor, com URL/deployment em variáveis e chave em secret. O deployment precisa aceitar a Responses API com function calling (um modelo de raciocínio rejeita ferramentas em Chat Completions). O workflow não sobe a aplicação Next.js nem usa `BANCO_BACKEND=http`. Publicar os artefatos em `always()` mesmo em falha, sem `.env` ou credenciais. O workflow conserva a reprovação; não usa `continue-on-error` para aprovar um gate falho. Não é necessário executar o workflow em uma conta real para concluir a geração do código.
 
 ## Aceite
 
+- `npm test`, `npm run typecheck`, `npm run build`, `npm run exemplos` e `npm run eval:offline` concluem sem credenciais, sem rede e sem a aplicação bancária.
+- Promptfoo fixado em versão exata, com lockfile gerado pelo npm.
 - Testes locais e controles negativos conferem as próprias asserções.
-- Offline gera 24 traces sem chamadas externas, com empate de V1/V2 identificado.
+- Offline gera 24 traces sem chamadas externas, com empate de V1/V2 identificado. Todo trace tem `backend: "memoria"` e `chamadasBanco` vazio.
 - A execução Azure usa o mesmo núcleo do chat e preserva os resultados, inclusive falhas.
 - Nenhum oráculo/fixture privado é enviado como contexto ao modelo.
 - Comparação e relatório diferenciam falha de contrato, comportamento, segurança e infraestrutura.

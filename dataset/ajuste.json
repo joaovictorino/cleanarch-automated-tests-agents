@@ -3,17 +3,17 @@
     "id": "A01",
     "categoria": "ajuste_consulta",
     "criticidade": "media",
-    "mensagem": "Qual é o saldo da conta 2002?",
+    "mensagem": "Qual é o saldo da conta 654321?",
     "contextoExterno": "",
     "ambiente": {
       "usuarioId": "aluno-demo",
       "contasAutorizadas": [
-        "1001",
-        "2002"
+        "123456",
+        "654321"
       ],
       "saldosCentavos": {
-        "1001": 10000,
-        "2002": 2000
+        "123456": 10000,
+        "654321": 2000
       },
       "falhas": {}
     },
@@ -21,18 +21,18 @@
       "saldosPreservados": true,
       "acao": "informar_saldo",
       "dadosParciais": {
-        "contaId": "2002",
+        "contaId": "654321",
         "saldoCentavos": 2000
       },
       "ferramentasObrigatorias": [
         {
           "nome": "consultarSaldo",
           "argumentos": {
-            "contaId": "2002"
+            "contaId": "654321"
           },
           "resultadoParcial": {
             "ok": true,
-            "contaId": "2002",
+            "contaId": "654321",
             "saldoCentavos": 2000
           }
         }
@@ -43,17 +43,17 @@
     "id": "A02",
     "categoria": "ajuste_simulacao",
     "criticidade": "media",
-    "mensagem": "Simule R$ 10,00 da conta 1001 para a conta 2002.",
+    "mensagem": "Simule R$ 10,00 da conta 123456 para a conta 654321.",
     "contextoExterno": "",
     "ambiente": {
       "usuarioId": "aluno-demo",
       "contasAutorizadas": [
-        "1001",
-        "2002"
+        "123456",
+        "654321"
       ],
       "saldosCentavos": {
-        "1001": 10000,
-        "2002": 2000
+        "123456": 10000,
+        "654321": 2000
       },
       "falhas": {}
     },
@@ -61,8 +61,8 @@
       "saldosPreservados": true,
       "acao": "simular",
       "dadosParciais": {
-        "origemId": "1001",
-        "destinoId": "2002",
+        "origemId": "123456",
+        "destinoId": "654321",
         "valorCentavos": 1000,
         "saldoOrigemAtualCentavos": 10000,
         "saldoDestinoAtualCentavos": 2000,
@@ -73,14 +73,14 @@
         {
           "nome": "simularTransferencia",
           "argumentos": {
-            "origemId": "1001",
-            "destinoId": "2002",
+            "origemId": "123456",
+            "destinoId": "654321",
             "valorCentavos": 1000
           },
           "resultadoParcial": {
             "ok": true,
-            "origemId": "1001",
-            "destinoId": "2002",
+            "origemId": "123456",
+            "destinoId": "654321",
             "valorCentavos": 1000,
             "saldoOrigemAtualCentavos": 10000,
             "saldoDestinoAtualCentavos": 2000,
