@@ -8,7 +8,8 @@ O projeto simula operações bancárias (criação e consulta de contas, saque, 
 | --- | --- |
 | 01 | Domínio bancário com TDD (RED → GREEN → REFACTOR) |
 | 02 | Next.js como adaptador HTTP, APIs de contas e transferência, testes de contrato/mock/integração, BDD com Cucumber, CI, cobertura, mutação (Stryker) e análise estática (SonarQube) |
-| 03 | Testes E2E com Playwright, tela didática de transferência, diagnóstico de falhas e performance com k6 |
+| 03 | Testes E2E com Playwright, tela didática de transferência, diagnóstico de falhas, performance com k6 e PostgreSQL local opcional |
+| 04 | Chat bancário didático com IA (`project-chat/`), testes da aplicação e avaliação de prompts V1 × V2 com Promptfoo |
 
 O `AGENTS.md` orienta os agentes de IA (escopo, regras e validação por etapa) e as especificações em `specs/` são a fonte de verdade dos comportamentos esperados.
 
@@ -22,25 +23,42 @@ O `AGENTS.md` orienta os agentes de IA (escopo, regras e validação por etapa) 
 - Playwright Test (Chromium, Firefox e WebKit configurados; CI usa Chromium)
 - k6 (scripts em TypeScript com `@types/k6`)
 - Stryker (mutação) e SonarQube/scanner via Docker
+- PostgreSQL 17 via Docker e `pg` (opcional, só na demonstração manual)
+- Aula 04 (`project-chat/`): Next.js 16, SDK `openai` (Azure/Responses API), Ajv, Jest e Promptfoo
 - GitHub Actions
 
 ## Estrutura
 
 ```text
-src/
-├── domain/        # Conta, NumeroConta, TransferenciaValor, Recibo, ErroNegocio
-├── application/   # operações de contas e transferências + estado em memória compartilhado
-├── api/           # handlers HTTP (contas, transferências), testáveis sem servidor
-└── app/           # Next.js: página inicial, /transferencias (tela didática) e rotas /api
+src/                    # aplicação bancária (Aulas 01–03)
+├── domain/             # Conta, NumeroConta, TransferenciaValor, Recibo, ErroNegocio
+├── application/        # operações de contas e transferências, estado em memória
+│   └── postgres/       # repositório opcional (CONTAS_STORAGE=postgres)
+├── api/                # handlers HTTP (contas, transferências), testáveis sem servidor
+└── app/                # Next.js: página inicial, /transferencias e rotas /api
 tests/
-├── domain/        # testes unitários do domínio
-├── api/           # testes de handlers (mock) e de integração com o domínio real
-└── e2e/           # jornadas Playwright e fixtures (helper de contas)
-features/          # steps e World do Cucumber
-perf/              # script k6 de consulta
-scripts/           # verificar-bdd.cjs (valida o relatório do Cucumber)
-specs/             # aula01/, aula02/ e laboratorio-03.md
-evidencias/        # saídas de k6 e diagnóstico (ignoradas pelo Git)
+├── domain/             # testes unitários do domínio
+├── api/                # handlers (mock) e integração com o domínio real
+└── e2e/                # jornadas Playwright e fixtures
+features/               # steps e World do Cucumber
+perf/                   # script k6 de consulta
+db/migrations/          # SQL puro (001_criar_contas.sql)
+scripts/                # verificar-bdd.cjs; db/migrate.ts e db/seed.ts
+specs/
+├── aula01/             # regras da transferência e criação do domínio
+├── aula02/             # Next.js, erros, APIs, mocks/integração, BDD, CI
+├── aula03/             # laboratorio-03.md
+└── 01-CONSTRUIR-CHAT.md, 02-TESTAR-APLICACAO.md, 03-AVALIAR-IA.md,
+    SPEC_LABORATORIO_04_CHAT.md      # Aula 04
+evidencias/             # saídas de k6 e diagnóstico (ignoradas pelo Git)
+project-chat/           # Aula 04: aplicação independente (próprio package.json)
+├── src/                # assistente, modelo, dominio, banco, api, app, trace
+├── tests/              # unit, integration, evaluation
+├── avaliacao/          # execução e comparação V1 × V2
+├── assertions/ providers/ schemas/ prompts/ dataset/ templates/
+├── scripts/            # smoke, avaliar, comparar, controles-negativos
+├── evidencias/ evidencias-exemplo/ traces/
+└── promptfooconfig.ts
 ```
 
 ## Executando
@@ -71,6 +89,7 @@ Páginas: `/` (inicial) e `/transferencias` (tela didática com campos Conta ori
 | `npm run test:e2e:headed` | Playwright com navegador visível |
 | `npm run test:e2e:report` | Abre o relatório HTML do Playwright |
 | `npm run typecheck:k6` | Verificação de tipos dos scripts k6 |
+| `npm run db:migrate` / `db:seed` | Migração e carga do PostgreSQL local (demonstração) |
 
 > O Playwright sobe o servidor com `npm run start`; execute `npm run build` antes de `npm run test:e2e`.
 
@@ -86,6 +105,18 @@ SonarQube (Docker; o token fica em `.env`, fora do Git):
 docker compose up -d sonarqube          # http://localhost:9000
 docker compose --profile scan run scanner
 ```
+
+PostgreSQL local (opcional; o padrão é `CONTAS_STORAGE=memory`; `DATABASE_URL` em `.env.local` não o ativa sozinha):
+
+```bash
+docker compose up -d db
+npm run db:migrate && npm run db:seed
+CONTAS_STORAGE=postgres npm run start
+```
+
+## Chat (Aula 04)
+
+`project-chat/` é uma aplicação separada (porta 3004) que consulta saldos e simula transferências via HTTP, sem executar movimentações. Instalação, variáveis do Azure, modo fake e avaliação estão em [`project-chat/README.md`](project-chat/README.md). O workflow `.github/workflows/lab04.yml` valida essa pasta offline e roda a avaliação Azure manualmente.
 
 ## API
 
@@ -127,10 +158,12 @@ Erros retornam `{"erro":"<CODIGO>"}` sem expor detalhes técnicos:
 - **BDD**: cenários Cucumber em `specs/aula02/transferencias.feature`, com estado novo por cenário.
 - **E2E (Aula 03)**: duas jornadas Playwright em `tests/e2e` (transferência aceita e saldo insuficiente), verificando tela e saldos no servidor. Trace, screenshot e vídeo de falhas vão para `test-results/` e o relatório para `playwright-report/`.
 - **Performance (Aula 03)**: `perf/consulta.ts` (k6) mede `GET /api/contas/{numero}` por 30 s com `VUS` configurável (padrão 5) e thresholds de p95 < 500 ms, falhas < 1 % e checks > 99 %. Variáveis: `BASE_URL`, `VUS`. Execução de escrita não faz parte do escopo.
-- **CI** (`.github/workflows`): `ci.yml` roda tipos, Jest com cobertura, BDD e build, publicando cobertura e relatórios Cucumber; `e2e.yml` roda o Playwright em Chromium e publica relatório e traces mesmo em caso de falha.
+- **Aula 04**: testes unitários, de integração e de avaliação em `project-chat/tests` (`npm test` dentro da pasta) e avaliação V1 × V2 (`npm run eval:offline`, `eval`).
+- **CI** (`.github/workflows`): `ci.yml` roda tipos, Jest com cobertura, BDD e build, publicando cobertura e relatórios Cucumber; `e2e.yml` roda o Playwright em Chromium e publica relatório e traces mesmo em caso de falha; `lab04.yml` valida `project-chat/` (tipos, testes, build, exemplos e ensaio offline).
 
 ## Especificações
 
 - `specs/aula01/`: regras da transferência e criação do domínio
 - `specs/aula02/`: Next.js, erros da aplicação, APIs, mocks e integração, BDD, qualidade/CI
-- `specs/laboratorio-03.md`: interface, diagnóstico e performance
+- `specs/aula03/laboratorio-03.md`: interface, diagnóstico e performance
+- `specs/01-CONSTRUIR-CHAT.md`, `02-TESTAR-APLICACAO.md`, `03-AVALIAR-IA.md` e `SPEC_LABORATORIO_04_CHAT.md`: Aula 04
