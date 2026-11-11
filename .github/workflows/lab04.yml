@@ -3,7 +3,7 @@ name: Lab 04 - Chat e avaliação
 on:
   pull_request:
     paths:
-      - 'laboratorio-04/**'
+      - 'project-chat/**'
       - '.github/workflows/lab04.yml'
   workflow_dispatch:
     inputs:
@@ -19,7 +19,7 @@ on:
 
 defaults:
   run:
-    working-directory: laboratorio-04
+    working-directory: project-chat
 
 jobs:
   offline:
@@ -31,7 +31,7 @@ jobs:
         with:
           node-version: '24'
           cache: npm
-          cache-dependency-path: laboratorio-04/package-lock.json
+          cache-dependency-path: project-chat/package-lock.json
       - run: npm ci
       - run: npm run typecheck
       - run: npm test
@@ -46,8 +46,8 @@ jobs:
         with:
           name: lab04-offline
           path: |
-            laboratorio-04/evidencias/
-            laboratorio-04/evidencias-exemplo/
+            project-chat/evidencias/
+            project-chat/evidencias-exemplo/
           if-no-files-found: warn
 
   azure:
@@ -65,7 +65,7 @@ jobs:
         with:
           node-version: '24'
           cache: npm
-          cache-dependency-path: laboratorio-04/package-lock.json
+          cache-dependency-path: project-chat/package-lock.json
       - run: npm ci
       # Não sobe o Next.js nem usa BANCO_BACKEND=http: a avaliação usa a fixture em memória.
       # Sem continue-on-error: um gate reprovado mantém o job reprovado.
@@ -76,5 +76,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: lab04-azure
-          path: laboratorio-04/evidencias/
+          path: project-chat/evidencias/
           if-no-files-found: warn
