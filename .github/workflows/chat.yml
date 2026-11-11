@@ -1,4 +1,4 @@
-name: Lab 04 - Chat e avaliação
+name: Chat e avaliação
 
 on:
   pull_request:
