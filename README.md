@@ -10,27 +10,68 @@ As funcionalidades são implementadas progressivamente, a partir de critérios d
 
 O projeto também utiliza `AGENTS.md` para orientar os agentes de IA e especificações em `specs/` para definir os comportamentos esperados.
 
+## Aulas
+
+- **Aula 01** — domínio bancário (`Conta`, `NumeroConta`, `TransferenciaValor`, `Recibo`) com testes unitários. Especificações em `specs/aula01/`.
+- **Aula 02** — Next.js como adaptador HTTP, APIs de contas e transferência, testes de contrato e integração, BDD com Cucumber, CI, cobertura, mutação e análise estática. Especificações na raiz de `specs/`.
+
 ## Tecnologias
 
-- Node.js
+- Node.js 24 e npm
 - TypeScript (strict)
 - Next.js (App Router) e React
-- Jest (via `next/jest`)
+- Jest (hoje com `ts-jest`; migração para `next/jest` prevista em `specs/criacao-nextjs.md`)
+- Cucumber.js com `tsx` (CommonJS)
+- Stryker (mutação), SonarQube (via Docker) e GitHub Actions
 - Agentes de codificação
 
 ## Estrutura
 
 ```text
-src/
-├── domain/        # Conta, NumeroConta, TransferenciaValor, Recibo, ErroNegocio
-├── application/   # adaptador que liga a API ao domínio (transferencias/operacao.ts)
-├── api/           # handler HTTP testável sem servidor (transferencias/handler.ts)
-└── app/           # Next.js: página mínima e rota POST /api/transferencias
-tests/
-├── domain/        # testes unitários do domínio
-└── api/           # testes do handler (mock) e de integração com o domínio real
-specs/             # especificações (fonte de verdade)
+.
+├── AGENTS.md                    # instruções para os agentes de IA
+├── src/
+│   └── domain/                  # Conta, NumeroConta, TransferenciaValor, Recibo
+├── tests/
+│   └── domain/                  # testes unitários do domínio
+├── specs/
+│   ├── aula01/                  # criacao.md, transferencia.md
+│   ├── criacao-nextjs.md        # preparação do Next.js e regressão
+│   ├── erros-aplicacao.md       # ErroNegocio e códigos estáveis
+│   ├── api-contas.md            # API de contas
+│   ├── testes-contas.md         # testes das contas
+│   ├── api-transferencias.md    # API de transferência
+│   ├── mocks-e-integracao.md    # mocks HTTP e integração real
+│   ├── bdd-cucumber.md          # BDD executável
+│   ├── transferencias.feature   # seis cenários obrigatórios
+│   └── qualidade-ci.md          # CI, cobertura, Stryker e SonarQube
+├── scripts/
+│   └── verificar-bdd.cjs        # exige os cenários @bdd-01..06 aprovados
+├── .github/workflows/ci.yml     # typecheck + Jest com cobertura
+├── cucumber.cjs                 # configuração do Cucumber.js (features/**)
+├── jest.config.cjs              # Jest principal
+├── jest.domain.config.cjs       # Jest com ts-jest, usado pelo Stryker
+├── stryker.config.json          # mutação sobre src/domain/Conta.ts
+├── sonar-project.properties     # análise SonarQube
+├── docker-compose.yml           # SonarQube e scanner (profile `scan`)
+├── next.config.ts
+├── tsconfig.json
+└── tsconfig.build.json          # build apenas de src/domain e tests para dist/
 ```
+
+Diretórios gerados e ignorados pelo Git: `coverage/`, `reports/` (Cucumber e mutação), `evidencias/`, `playwright-report/`, `test-results/`, `dist/`, `.next/`.
+
+### Camadas previstas nas specs
+
+Ainda não implementadas neste estado do repositório; as specs definem os contratos:
+
+| Camada | Diretório | Responsabilidade |
+| --- | --- | --- |
+| Domínio | `src/domain` | regras bancárias e `ErroNegocio` |
+| Aplicação | `src/application` | adaptador entre API e domínio |
+| API | `src/api` | handlers HTTP testáveis sem servidor; validam só o transporte e traduzem erros classificados |
+| App | `src/app` | Next.js: página mínima e rotas `/api/contas` e `/api/transferencias` |
+| BDD | `features/` | `.feature`, `step-definitions/` e `support/` do Cucumber |
 
 ## Executando
 
@@ -49,27 +90,22 @@ Scripts disponíveis:
 | `npm start` | Executa o build de produção |
 | `npm test` | Executa a suíte Jest |
 | `npm run test:watch` | Jest em modo watch |
-| `npm run test:coverage` | Jest com cobertura |
+| `npm run test:coverage` | Jest com cobertura (`coverage/lcov.info`) |
 | `npm run typecheck` | Verificação de tipos (`tsc --noEmit`) |
 | `npm run build:ts` | Transpila apenas `src/domain` e `tests` para `dist/` |
+| `npm run test:bdd` | Cenários Cucumber |
+| `npm run test:bdd:dry` | Cucumber em dry-run (valida steps sem executar) |
+| `npm run test:bdd:full` | Cucumber seguido de `scripts/verificar-bdd.cjs` |
 
-## API de transferências
-
-`POST /api/transferencias` (contrato em `specs/api-transferencias.md`):
+### Qualidade
 
 ```bash
-curl -X POST localhost:3000/api/transferencias \
-  -d '{"contaOrigem":"123456","contaDestino":"654321","valor":300}'
-# 201 {"comprovante":"123456"}
+docker compose up -d sonarqube                   # SonarQube em http://localhost:9000
+docker compose --profile scan run --rm scanner   # envia a análise (requer SONAR_TOKEN no .env)
 ```
 
-Erros retornam `{"erro":"<CODIGO>"}`:
+O token fica em `.env`, fora do Git. O CI (`.github/workflows/ci.yml`) executa `typecheck` e `test:coverage` e publica `coverage/` e os relatórios do Cucumber como artefatos.
 
-| HTTP | Código |
-| --- | --- |
-| 400 | `REQUISICAO_INVALIDA`, `CONTA_INVALIDA`, `VALOR_INVALIDO` |
-| 404 | `CONTA_NAO_ENCONTRADA` |
-| 422 | `MESMA_CONTA`, `SALDO_INSUFICIENTE` |
-| 500 | `ERRO_INTERNO` |
+## Contrato da API de transferências
 
-A rota usa um cadastro em memória didático (contas `123456` com saldo 1000 e `654321` com 200). O estado é perdido ao reiniciar e não há suporte a concorrência.
+Definido em `specs/api-transferencias.md`. Erros retornam `{"erro":"<CODIGO>"}`, com códigos estáveis descritos em `specs/erros-aplicacao.md`. O estado das contas é um `Map` em memória, compartilhado apenas dentro do mesmo processo: não há persistência, concorrência nem transação distribuída.
