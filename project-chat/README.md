@@ -7,7 +7,7 @@ Fluxo: navegador → Route Handler `POST /api/chat` → factory → `executarTur
 ## Instalação e execução
 
 ```bash
-cd laboratorio-04
+cd project-chat
 npm install
 cp .env.example .env      # opcional no modo fake
 npm run dev               # ou: npm run build && npm start (porta 3004)
@@ -17,7 +17,7 @@ Abra <http://localhost:3004>. O servidor escuta apenas em `127.0.0.1`.
 
 ## Onde preencher os três dados do Azure
 
-Somente em `laboratorio-04/.env` (ignorado pelo Git). Nunca no frontend, no código ou em prompts:
+Somente em `project-chat/.env` (ignorado pelo Git). Nunca no frontend, no código ou em prompts:
 
 ```
 MODEL_PROVIDER=azure

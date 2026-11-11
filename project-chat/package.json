@@ -1,8 +1,8 @@
 {
-  "name": "laboratorio-04-chat",
+  "name": "project-chat",
   "version": "1.0.0",
   "private": true,
-  "description": "Chat bancário didático (consulta e simulação) - Laboratório 04",
+  "description": "Chat bancário didático (consulta e simulação)",
   "engines": {
     "node": ">=24"
   },
